@@ -7,8 +7,12 @@ class MainPanelAdapter {
     class Layout(owner: MainPanelAdapter) {
         @JvmField val spanSizeLookup = `layoutManager$1$1`(owner)
         @JvmField var columns = 2
+        var acceptsSpanCount = true
         fun getSpanSizeLookup() = spanSizeLookup
-        fun setSpanCount(count: Int) { columns = count }
+        fun setSpanCount(count: Int) {
+            check(acceptsSpanCount)
+            columns = count
+        }
     }
 
     class `layoutManager$1$1`(private val owner: MainPanelAdapter) {

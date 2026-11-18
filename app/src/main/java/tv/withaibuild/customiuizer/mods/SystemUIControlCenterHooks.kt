@@ -600,10 +600,6 @@ object SystemUIControlCenterHooks {
         ) {
             VolumeModeButtonColorsHook(loader)
         }
-        val gridColumns = MainModule.mPrefs.getInt("system_ccgridcolumns", 4)
-        if (MainModule.mPrefs.getBoolean("system_cc_tile_roundedrect")) {
-            CCTileCornerHook(loader, 4f / gridColumns.coerceAtLeast(4))
-        }
         if (MainModule.mPrefs.getBoolean("system_cc_volume_showpct")) {
             ShowVolumePctHook(loader)
         }
@@ -613,15 +609,16 @@ object SystemUIControlCenterHooks {
         if (hideOperator || hideDelimiter || showSteps) {
             CCHeaderHook(loader, hideOperator, hideDelimiter, showSteps)
         }
-        if (gridColumns > 4) {
-            SystemCCGridHookLoader(loader, gridColumns)
-        }
-        hookPanelContent(
+        val gridColumns = MainModule.mPrefs.getInt("system_ccgridcolumns", 4)
+        val customGrid = hookPanelContent(
             loader,
             gridColumns,
             hideEdit = MainModule.mPrefs.getBoolean("system_cc_hide_edit"),
             hideSecurity = MainModule.mPrefs.getBoolean("system_cc_hide_profile_monitoring"),
         )
+        if (MainModule.mPrefs.getBoolean("system_cc_tile_roundedrect")) {
+            CCTileCornerHook(loader, if (customGrid) 4f / gridColumns else 1f)
+        }
         if (MainModule.mPrefs.getBoolean("system_cc_btandtorch_ascard")) {
             CCBluetoothAsCardHook(loader)
         }
@@ -1164,7 +1161,7 @@ object SystemUIControlCenterHooks {
         ControlCenterPluginRuntime.hookIfNeeded(lpparam)
     }
 
-    private fun hookGridTileSizing(pluginLoader: ClassLoader, scale: Float) = ModuleHelper.guarded {
+    private fun prepareGridTileSizing(pluginLoader: ClassLoader, scale: Float): List<Pair<Method, MethodHook>> {
         val tileClass = XposedHelpers.findClass("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader)
         val resourceIds = XposedHelpers.findClass("miui.systemui.controlcenter.R\$id", pluginLoader)
         val iconFrameId = resourceIds.getDeclaredField("icon_frame").getInt(null)
@@ -1204,30 +1201,29 @@ object SystemUIControlCenterHooks {
                 containerHeight.setInt(tile, (heightDp * tile.resources.displayMetrics.density).toInt())
             }
         }
-        check(PreparedHookBatch().install(listOf(
+        return listOf(
             tileClass.getDeclaredMethod("updateSize") to updateSize,
             tileClass.getDeclaredMethod("onFinishInflate") to finishInflate,
             tileClass.getDeclaredMethod("updateContainerHeight") to updateHeight,
-        )).isActive)
+        )
     }
 
-    internal fun SystemCCGridHookLoader(pluginLoader: ClassLoader, cols: Int) {
-        hookGridTileSizing(pluginLoader, 4f / cols)
-
-        hookGridPanelLayout(pluginLoader)
-
+    private fun prepareGridFullRowSpans(pluginLoader: ClassLoader, columns: Int): List<Pair<Method, MethodHook>> {
         val columnsReplaceHook = object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) { callback.returnAndSkip(cols) }
+            override fun before(callback: BeforeHookCallback) { callback.returnAndSkip(columns) }
         }
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.HeaderSpaceController", pluginLoader, "getSpanSize", columnsReplaceHook)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.security.SecurityFooterController", pluginLoader, "getSpanSize", columnsReplaceHook)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.qs.EditButtonController", pluginLoader, "getSpanSize", columnsReplaceHook)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.qs.QSListController\$EditModeDividerTextItem", pluginLoader, "getSpanSize", columnsReplaceHook)
-
-        hookGridPanelAnimation(pluginLoader)
+        val panelPackage = "miui.systemui.controlcenter.panel.main"
+        return listOf(
+            "$panelPackage.header.HeaderSpaceController",
+            "$panelPackage.security.SecurityFooterController",
+            "$panelPackage.qs.EditButtonController",
+            "$panelPackage.qs.QSListController\$EditModeDividerTextItem",
+        ).map { name ->
+            XposedHelpers.findClass(name, pluginLoader).getDeclaredMethod("getSpanSize") to columnsReplaceHook
+        }
     }
 
-    private fun hookGridPanelLayout(pluginLoader: ClassLoader) = ModuleHelper.guarded {
+    private fun prepareGridPanelLayout(pluginLoader: ClassLoader): List<Pair<Method, MethodHook>> {
         val controller = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader)
         val leftPanel = controller.getDeclaredField("leftMainPanel")
         val rightPanel = controller.getDeclaredField("rightMainPanel")
@@ -1277,7 +1273,7 @@ object SystemUIControlCenterHooks {
                 callback.returnAndSkip(null)
             }
         }
-        check(PreparedHookBatch().install(listOf(setSeparated to positionPanels, updatePanelSize to sizePanels)).isActive)
+        return listOf(setSeparated to positionPanels, updatePanelSize to sizePanels)
     }
 
     private fun resizeStackedPanel(panel: View, width: Int) {
@@ -1288,7 +1284,7 @@ object SystemUIControlCenterHooks {
         if (!panel.isLayoutRequested) panel.requestLayout()
     }
 
-    private fun hookGridPanelAnimation(pluginLoader: ClassLoader) = ModuleHelper.guarded {
+    private fun prepareGridPanelAnimation(pluginLoader: ClassLoader): List<Pair<Method, MethodHook>> {
         val controller = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader)
         val commonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
         val utils = commonUtils.getDeclaredField("INSTANCE").get(null)
@@ -1343,33 +1339,39 @@ object SystemUIControlCenterHooks {
                 if (left.visibility != visibility) left.visibility = visibility
             }
         }
-        check(PreparedHookBatch().install(listOf(
+        return listOf(
             controller.getDeclaredMethod("updateVisibility", Int::class.javaPrimitiveType) to updateVisibility,
             controller.getDeclaredMethod("forceToShow", Any::class.java) to forceToShow,
             controller.getDeclaredMethod("onAnimUpdate") to updateAlpha,
             controller.getDeclaredMethod("onConfigurationChanged", Int::class.javaPrimitiveType) to configurationChanged,
-        )).isActive)
+        )
     }
+
+    private class PanelGrid(val hooks: List<Pair<Method, MethodHook>>, val bindLeft: (Any) -> Unit) {
+        val batch = PreparedHookBatch()
+    }
+
+    private const val LEFT_GRID_BOUND = "a14LeftGridBound"
+    private const val LEFT_GRID_ADAPTER = "a14LeftGridAdapter"
 
     internal fun hookPanelContent(
         pluginLoader: ClassLoader,
         columns: Int,
         hideEdit: Boolean,
         hideSecurity: Boolean,
-    ) = ModuleHelper.guarded {
-        val customGrid = columns > 4
-        if (!customGrid && !hideEdit && !hideSecurity) return@guarded
+    ): Boolean = ModuleHelper.guarded(false) {
+        if (columns <= 4 && !hideEdit && !hideSecurity) return@guarded false
         val panelPackage = "miui.systemui.controlcenter.panel.main"
         val distributor = XposedHelpers.findClass("$panelPackage.MainPanelContentDistributor", pluginLoader)
-        val editButton = if (customGrid || hideEdit) {
+        val editButton = if (hideEdit) {
             XposedHelpers.findClass("$panelPackage.qs.EditButtonController", pluginLoader)
         } else null
-        val securityFooter = if (customGrid || hideSecurity) {
+        val securityFooter = if (hideSecurity) {
             XposedHelpers.findClass("$panelPackage.security.SecurityFooterController", pluginLoader)
         } else null
         val childControllers = if (hideEdit || hideSecurity) distributor.getDeclaredField("childControllers") else null
-        val bindLeftGrid = if (customGrid) prepareGridSpanLookup(distributor, pluginLoader, columns) else null
-        if (bindLeftGrid == null && childControllers == null) return@guarded
+        val grid = if (columns > 4) preparePanelGrid(distributor, pluginLoader, columns) else null
+        if (grid == null && childControllers == null) return@guarded false
         val constructor = distributor.declaredConstructors.single()
         val initialize = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
@@ -1384,25 +1386,38 @@ object SystemUIControlCenterHooks {
                         }
                     }
                 }
-                bindLeftGrid?.invoke(owner)
+                if (grid != null && grid.batch.isActive) {
+                    grid.bindLeft(owner)
+                    XposedHelpers.setAdditionalInstanceField(owner, LEFT_GRID_BOUND, true)
+                }
             }
         }
         check(ModuleHelper.findAndHookConstructor(
             distributor.name, pluginLoader, *constructor.parameterTypes, initialize,
         ) != null)
-        if (bindLeftGrid != null) {
+        grid != null && grid.batch.install(grid.hooks).isActive
+    }
+
+    private fun preparePanelGrid(distributor: Class<*>, pluginLoader: ClassLoader, columns: Int): PanelGrid? =
+        ModuleHelper.guarded(null) {
+            // The native vertical layout detaches the left panel. Keep its layout and content changes in one batch.
+            val hooks = prepareGridPanelLayout(pluginLoader).toMutableList()
+            val bindLeft = prepareGridSpanLookup(distributor, pluginLoader, columns, hooks)
+            val panelPackage = "miui.systemui.controlcenter.panel.main"
             val qsList = XposedHelpers.findClass("$panelPackage.qs.QSListController", pluginLoader)
+            val editButton = XposedHelpers.findClass("$panelPackage.qs.EditButtonController", pluginLoader)
+            val securityFooter = XposedHelpers.findClass("$panelPackage.security.SecurityFooterController", pluginLoader)
             val footerSpace = XposedHelpers.findClass("$panelPackage.footer.FooterSpaceController", pluginLoader)
             val inited = XposedHelpers.findField(distributor, "inited")
             val leftContent = distributor.getDeclaredField("leftPanelContent")
             val rightContent = distributor.getDeclaredField("rightPanelContent")
             val distributePanels = distributor.getDeclaredMethod("distributePanels", Boolean::class.javaPrimitiveType)
-            check(ModuleHelper.hookMethod(distributePanels, object : MethodHook() {
+            hooks += distributePanels to object : MethodHook() {
                 @Suppress("UNCHECKED_CAST")
                 override fun after(callback: AfterHookCallback) {
                     if (callback.getThrowable() != null || callback.getArg(0) as Boolean) return
                     val owner = callback.getThisObject()
-                    if (!inited.getBoolean(owner)) return
+                    if (!inited.getBoolean(owner) || XposedHelpers.getAdditionalInstanceField(owner, LEFT_GRID_BOUND) != true) return
                     val left = leftContent.get(owner) as ArrayList<Any>
                     val right = rightContent.get(owner) as ArrayList<Any>
                     // The ROM clears both lists first and emits the vertical items in priority order.
@@ -1420,54 +1435,58 @@ object SystemUIControlCenterHooks {
                     }
                     for (index in right.lastIndex downTo retained) right.removeAt(index)
                 }
-            }) != null)
+            }
+            hooks += prepareGridPanelAnimation(pluginLoader)
+            hooks += prepareGridTileSizing(pluginLoader, 4f / columns)
+            hooks += prepareGridFullRowSpans(pluginLoader, columns)
+            PanelGrid(hooks, bindLeft)
+        }
+
+    private fun prepareGridSpanLookup(
+        distributor: Class<*>,
+        pluginLoader: ClassLoader,
+        columns: Int,
+        hooks: MutableList<Pair<Method, MethodHook>>,
+    ): (Any) -> Unit {
+        val adapter = distributor.getDeclaredField("leftAdapter")
+        val adapterClass = adapter.type
+        val layoutManager = adapterClass.getDeclaredField("layoutManager")
+        val lookupClass = XposedHelpers.findClass(adapterClass.name + "\$layoutManager\$1\$1", pluginLoader)
+        val lookupMethod = layoutManager.type.getMethod("getSpanSizeLookup")
+        val setSpanCount = layoutManager.type.getMethod("setSpanCount", Int::class.javaPrimitiveType)
+        val contentMap = adapterClass.getDeclaredField("contentMap")
+        val companionField = adapterClass.getDeclaredField("Companion")
+        val companion = companionField.get(null)
+        val getItem = companionField.type.getDeclaredMethod("getItem", Map::class.java, Int::class.javaPrimitiveType)
+            .apply { isAccessible = true }
+        val itemSpanSize = getItem.returnType.getMethod("getSpanSize")
+
+        val getSpanSize = lookupClass.getDeclaredMethod("getSpanSize", Int::class.javaPrimitiveType)
+        hooks += getSpanSize to object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val owner = (XposedHelpers.getAdditionalInstanceField(chain.thisObject, LEFT_GRID_ADAPTER) as? WeakReference<*>)?.get()
+                    ?: return chain.proceed()
+                val span = ModuleHelper.guarded<Int?>(null) {
+                    val position = chain.getArg(0) as Int
+                    if (position < 0) return@guarded columns
+                    // The ROM replaces contentMap on rebuild. Always use the current map.
+                    val item = getItem.invoke(companion, contentMap.get(owner), position) ?: return@guarded columns
+                    (itemSpanSize.invoke(item) as Int).coerceIn(1, columns)
+                }
+                return span ?: chain.proceed()
+            }
+        }
+
+        return { owner ->
+            val leftAdapter = adapter.get(owner)
+            val manager = layoutManager.get(leftAdapter)
+            val lookup = lookupMethod.invoke(manager)
+            check(lookupClass.isInstance(lookup))
+            setSpanCount.invoke(manager, columns)
+            // The adapter retains its lookup. Keep the association weak in the other direction.
+            XposedHelpers.setAdditionalInstanceField(lookup, LEFT_GRID_ADAPTER, WeakReference(leftAdapter))
         }
     }
-
-    private const val LEFT_GRID_ADAPTER = "a14LeftGridAdapter"
-
-    private fun prepareGridSpanLookup(distributor: Class<*>, pluginLoader: ClassLoader, columns: Int): ((Any) -> Unit)? =
-        ModuleHelper.guarded(null) {
-            val adapter = distributor.getDeclaredField("leftAdapter")
-            val adapterClass = adapter.type
-            val layoutManager = adapterClass.getDeclaredField("layoutManager")
-            val lookupClass = XposedHelpers.findClass(adapterClass.name + "\$layoutManager\$1\$1", pluginLoader)
-            val lookupMethod = layoutManager.type.getMethod("getSpanSizeLookup")
-            val setSpanCount = layoutManager.type.getMethod("setSpanCount", Int::class.javaPrimitiveType)
-            val contentMap = adapterClass.getDeclaredField("contentMap")
-            val companionField = adapterClass.getDeclaredField("Companion")
-            val companion = companionField.get(null)
-            val getItem = companionField.type.getDeclaredMethod("getItem", Map::class.java, Int::class.javaPrimitiveType)
-                .apply { isAccessible = true }
-            val itemSpanSize = getItem.returnType.getMethod("getSpanSize")
-
-            val getSpanSize = lookupClass.getDeclaredMethod("getSpanSize", Int::class.javaPrimitiveType)
-            check(ModuleHelper.hookMethod(getSpanSize, object : MethodHook() {
-                override fun intercept(chain: XposedInterface.Chain): Any? {
-                    val owner = (XposedHelpers.getAdditionalInstanceField(chain.thisObject, LEFT_GRID_ADAPTER) as? WeakReference<*>)?.get()
-                        ?: return chain.proceed()
-                    val span = ModuleHelper.guarded<Int?>(null) {
-                        val position = chain.getArg(0) as Int
-                        if (position < 0) return@guarded columns
-                        // The ROM replaces contentMap on rebuild. Always use the current map.
-                        val item = getItem.invoke(companion, contentMap.get(owner), position) ?: return@guarded columns
-                        (itemSpanSize.invoke(item) as Int).coerceIn(1, columns)
-                    }
-                    return span ?: chain.proceed()
-                }
-            }) != null)
-
-            val bind: (Any) -> Unit = { owner ->
-                val leftAdapter = adapter.get(owner)
-                val manager = layoutManager.get(leftAdapter)
-                val lookup = lookupMethod.invoke(manager)
-                check(lookupClass.isInstance(lookup))
-                setSpanCount.invoke(manager, columns)
-                // The adapter retains its lookup. Keep the association weak in the other direction.
-                XposedHelpers.setAdditionalInstanceField(lookup, LEFT_GRID_ADAPTER, WeakReference(leftAdapter))
-            }
-            bind
-        }
 
     @JvmStatic
     fun CCBluetoothAsCardHook(pluginLoader: ClassLoader) {

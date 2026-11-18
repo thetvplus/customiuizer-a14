@@ -32,6 +32,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 
 @RunWith(RobolectricTestRunner::class)
@@ -266,6 +267,7 @@ class ControlCenterPanelHookTest {
         val owner = MainPanelContentDistributor(listOf(last, security, spacer, edit, qs, first))
         val left = owner.leftPanelContent
         val right = owner.rightPanelContent
+        installed.invoke(owner.javaClass.declaredConstructors.single(), owner) {}
 
         installed.distribute(owner, horizontal = false)
         assertTrue(left.isEmpty() && right.isEmpty())
@@ -354,13 +356,68 @@ class ControlCenterPanelHookTest {
         assertTrue(installed.keys.none { it.name == "distributePanels" })
     }
 
+    @Test fun failedSpanBindingKeepsThatDistributorsTilesOnTheNativePanel() = withControlCenterHooks { installed ->
+        val tile = QSListController()
+        val owner = MainPanelContentDistributor(listOf(tile))
+        owner.leftAdapter.layoutManager.acceptsSpanCount = false
+        installed.invoke(owner.javaClass.declaredConstructors.single(), owner) {}
+        owner.inited = true
+
+        installed.distribute(owner, horizontal = false)
+        assertEquals(listOf(tile), owner.rightPanelContent)
+        assertTrue(owner.leftPanelContent.isEmpty())
+        assertEquals(2, owner.leftAdapter.layoutManager.columns)
+    }
+
+    @Test fun failedLayoutHookKeepsTilesOnTheNativePanelAndPreservesHiddenItems() {
+        for (rejected in listOf("updatePanelSize", "distributePanels", "updateVisibility", "updateContainerHeight")) {
+            withControlCenterHooks(
+                install = { loader ->
+                    val previous = MainModule.mPrefs.getAll()
+                    MainModule.mPrefs.replaceSnapshot(mapOf(
+                        "system_ccgridcolumns" to 5,
+                        "system_cc_hide_edit" to true,
+                        "system_cc_hide_profile_monitoring" to true,
+                    ))
+                    try {
+                        SystemUIControlCenterHooks.initControlCenter(loader)
+                    } finally {
+                        MainModule.mPrefs.replaceSnapshot(previous)
+                    }
+                },
+                reject = { it.name == rejected },
+            ) { installed ->
+                val panel = MainPanelController(RuntimeEnvironment.getApplication())
+                val setSeparated = panel.javaClass.getDeclaredMethod("setUseSeparatedPanels", Boolean::class.javaObjectType)
+                installed.invoke(setSeparated, panel, false) { panel.setUseSeparatedPanels(false) }
+                assertNull(rejected, panel.leftMainPanel.parent)
+
+                val qs = QSListController()
+                val footer = FooterSpaceController()
+                val distributor = MainPanelContentDistributor(listOf(qs, footer, EditButtonController(), SecurityFooterController()))
+                installed.invoke(distributor.javaClass.declaredConstructors.single(), distributor) {}
+                assertEquals(listOf(qs, footer), distributor.childControllers)
+                distributor.inited = true
+                val distribute = distributor.javaClass.getDeclaredMethod("distributePanels", Boolean::class.javaPrimitiveType)
+                if (distribute in installed) {
+                    installed.distribute(distributor, horizontal = false)
+                } else {
+                    distributor.distributePanels(false)
+                }
+                assertEquals(rejected, listOf(qs, footer), distributor.rightPanelContent)
+                assertTrue(distributor.leftPanelContent.isEmpty())
+                assertEquals(2, distributor.leftAdapter.layoutManager.columns)
+            }
+        }
+    }
+
     private fun Map<Executable, XposedInterface.Hooker>.distribute(owner: MainPanelContentDistributor, horizontal: Boolean) {
         val method = owner.javaClass.getDeclaredMethod("distributePanels", Boolean::class.javaPrimitiveType)
         invoke(method, owner, horizontal) { owner.distributePanels(horizontal) }
     }
 
     private fun withControlCenterHooks(
-        install: (ClassLoader) -> Unit = { SystemUIControlCenterHooks.SystemCCGridHookLoader(it, 5) },
+        install: (ClassLoader) -> Unit = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = false, hideSecurity = false) },
         reject: (Executable) -> Boolean = { false },
         test: (Map<Executable, XposedInterface.Hooker>) -> Unit,
     ) {

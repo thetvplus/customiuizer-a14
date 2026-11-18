@@ -7,6 +7,10 @@ import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import miui.systemui.controlcenter.R
 
+class HeaderSpaceController {
+    fun getSpanSize() = 4
+}
+
 class StatusHeaderController(context: Context) {
     private val header = ConstraintLayout(context)
     val carrier = TextView(context).apply { id = R.id.header_carrier_view }

@@ -4,4 +4,5 @@ import miui.systemui.controlcenter.panel.main.MainPanelContent
 
 class SecurityFooterController(override var available: Boolean = true) : MainPanelContent {
     override val priority = 201
+    fun getSpanSize() = 4
 }

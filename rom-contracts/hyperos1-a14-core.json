@@ -129,7 +129,7 @@
       "target": "plugin",
       "class": "Lmiui/systemui/controlcenter/qs/tileview/QSTileItemView;",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt",
-      "sourceHookFunction": "hookGridTileSizing",
+      "sourceHookFunction": "prepareGridTileSizing",
       "targetProcessPackage": "com.android.systemui",
       "methods": [
         { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "QS tile item view setup." },
