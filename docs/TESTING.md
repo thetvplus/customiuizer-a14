@@ -75,9 +75,7 @@ CodeQL Default setup 持续扫描 Python 和 Actions。master 上的手动 [Kotl
 
 [依赖图](../.github/workflows/a14-dependency-graph.yml) 单独手动运行，只解析依赖并由隔离作业提交，不重复 CI 或构建 APK。仓库 Actions 白名单须同时允许 `setup-gradle` 与 `dependency-submission`，不能只允许前者而留下失效入口。
 
-master / PR 新提交取消旧运行，tag 正常完成；诊断 7 天，检查产物 30 天，历史清理保留正式发行的成功验证记录。正式自动发布、同 SHA CI 复用、Environment master 限制、顺序双端发布和原候选恢复只维护在 [RELEASE](RELEASE.md)，普通 CI 永不接触正式密钥。
-
-清理历史时先核对 Release 元数据、原 run / attempt 及候选资产；签名任务最终失败也可能留下可恢复候选，不能按 conclusion 批量删除。没有过期或确认失效的资产时沿用现有保留期，不新增定时清理工作流。
+master / PR 新提交取消旧运行，tag 正常完成。产物请求保留期见 [CI 配置](../.github/workflows/a14-ci.yml)，实际到期时间以 GitHub 的 `expires_at` 为准。正式发布与恢复见 [RELEASE](RELEASE.md)，运行与产物的保留依据见 [Actions 清理](RELEASE.md#actions产物与证明清理)。
 
 Python 的 CI 命令使用 unittest buffer：成功测试的模拟发布 / 故障输出被收起，测试数量、跳过和失败摘要保留；失败时仍显示该测试的 stdout / stderr。Hermetic 命令还清空继承的 Actions 摘要 / 输出 / 环境 / 路径 / 状态文件位置，避免模拟发布污染真实工作流；测试可显式设置自己的临时输出文件。日志中的模拟发布链接不代表真实发行。
 
@@ -116,7 +114,3 @@ SDK 安装与 Gradle 输入一致；宿主 classpath 与 APK runtime 分开审�
 - 自动定位核对首启重启、允许与阻止名单、无匹配应用、最后一张匹配卡片移除，以及原先已开启的定位状态。结束后恢复名单、功能开关和定位。
 - DECK 从桌面和应用进入后返回，核对前后卡位置、打开和取消时的窗口交接。原生几何差异和前景归还由现有 Host 行为回归覆盖，截图仅用于状态或时序无法确认的环节。
 - 静置前后核对宿主 PID、CPU 时间、内存和对应时间段内的崩溃或 ANR。记录锁屏、供电和 Doze 状态，采样之间保持无额外驱动。性能回归比较需在同一设备与相同条件下分别采集正式基线和候选。
-
-## 本轮设备刷新率取证
-
-60 / 120 Hz 以采样时的实际 display mode / render frame rate 及 FrameTimeline 为准，不能用设置请求值代替。2026-11-06 的 A14 MISettings 定向反汇编确认：SDK 33 起 `user_refresh_rate` 读写位于 Settings.Secure；对应分支还消费 `miui_refresh_rate`，仅写同名 System 键不会落实本机 60 Hz。取证前分别保存原值，采样结束恢复；此为本轮样本的测量环境说明，不作为所有 ROM 的通用写入配方。GPU memory 数据源不等于 GPU render stages，未提供后者的设备不能据 UI / RenderThread 时长宣称 GPU 用时或功耗收益。

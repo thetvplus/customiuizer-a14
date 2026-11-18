@@ -8,8 +8,6 @@ import android.content.IntentFilter
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
-import android.widget.GridView
-import android.widget.ImageView
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.MainModule
@@ -69,17 +67,6 @@ object LauncherFolderHooks {
     @Volatile
     private var folderPreferenceObserverRegistered = false
 
-    /** `Folder.mContent` / `Folder.mFakeIcon`, resolved once instead of per layout pass. */
-    @Volatile
-    private var folderContentField: Field? = null
-
-    @Volatile
-    private var folderFakeIconField: Field? = null
-
-    /** Set when the Folder ABI could not be resolved, so layout stops probing every frame. */
-    @Volatile
-    private var folderLayoutAbiUnavailable = false
-
     /**
      * Last class probed for folder-blur host methods. Only the most recent Class is kept so
      * the cache stays bounded; the launcher window context is one class for the process.
@@ -135,27 +122,6 @@ object LauncherFolderHooks {
         })
     }
 
-    /**
-     * Resolves the two Folder fields the layout pass needs. A ROM without them disables the
-     * layout adjustment instead of throwing from every `onLayout`.
-     */
-    private fun resolveFolderLayoutFields(folder: Any): Boolean {
-        if (folderLayoutAbiUnavailable) return false
-        val content = folderContentField
-        if (content != null && content.declaringClass.isInstance(folder)) return true
-
-        val resolvedContent = XposedHelpers.findFieldIfExists(folder.javaClass, "mContent")
-        val resolvedFakeIcon = XposedHelpers.findFieldIfExists(folder.javaClass, "mFakeIcon")
-        if (resolvedContent == null || resolvedFakeIcon == null) {
-            folderLayoutAbiUnavailable = true
-            XposedHelpers.log("[FolderWidth] Folder.mContent/mFakeIcon unavailable, layout adjustment disabled")
-            return false
-        }
-        folderContentField = resolvedContent
-        folderFakeIconField = resolvedFakeIcon
-        return true
-    }
-
     @JvmStatic
     fun CloseFolderOnLaunchHook(lpparam: PackageReadyParam) {
         installFolderPreferenceSnapshot()
@@ -189,97 +155,77 @@ object LauncherFolderHooks {
         MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "integer", "config_folder_columns_count", folderCols)
     }
 
-    private fun setFolderWidth(thisObject: Any) {
-        if (folderWidthEnabled) {
-            val mContent = XposedHelpers.getObjectField(thisObject, "mContent") as GridView
-            val lp = mContent.layoutParams
-            lp.width = ViewGroup.LayoutParams.MATCH_PARENT
-            mContent.layoutParams = lp
+    internal fun applyFolderWidth(content: View) {
+        val params = content.layoutParams ?: return
+        if (params.width == ViewGroup.LayoutParams.MATCH_PARENT) return
+        params.width = ViewGroup.LayoutParams.MATCH_PARENT
+        content.layoutParams = params
+    }
+
+    internal fun layoutFolderFakeIcon(content: View, icon: View) {
+        val left = content.left
+        val top = content.top
+        val right = content.right
+        val bottom = top + content.width
+        if (icon.isLayoutRequested || icon.left != left || icon.top != top ||
+            icon.right != right || icon.bottom != bottom
+        ) {
+            icon.layout(left, top, right, bottom)
         }
     }
 
     @JvmStatic
     fun FolderColumnsHook(lpparam: PackageReadyParam) {
         installFolderPreferenceSnapshot()
-        ModuleHelper.findAndHookMethod("com.miui.home.launcher.Folder", lpparam.classLoader, "onFinishInflate", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.getThisObject()
+        val folder = XposedHelpers.findClass("com.miui.home.launcher.Folder", lpparam.classLoader)
+        val content = XposedHelpers.findFieldIfExists(folder, "mContent")
+        val background = XposedHelpers.findFieldIfExists(folder, "mBackgroundView")
+        val fakeIcon = XposedHelpers.findFieldIfExists(folder, "mFakeIcon")
 
-                    setFolderWidth(thisObject)
-                    val cols = folderCols
-                    if (cols > 3 && folderSpace) {
-                        val mBackgroundView = XposedHelpers.getObjectField(thisObject, "mBackgroundView") as ViewGroup
-                        mBackgroundView.setPadding(
-                            mBackgroundView.paddingLeft / 3,
-                            mBackgroundView.paddingTop,
-                            mBackgroundView.paddingRight / 3,
-                            mBackgroundView.paddingBottom
-                        )
+        ModuleHelper.findAndHookMethod(folder, "onFinishInflate", object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    val owner = chain.thisObject
+                    if (folderWidthEnabled) (content?.get(owner) as? View)?.let(::applyFolderWidth)
+                    if (folderCols > 3 && folderSpace) {
+                        val view = background?.get(owner) as? View ?: return@guarded
+                        view.setPadding(view.paddingLeft / 3, view.paddingTop, view.paddingRight / 3, view.paddingBottom)
                     }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return result
             }
         })
 
-        ModuleHelper.findAndHookMethod("com.miui.home.launcher.Folder", lpparam.classLoader, "resetViewsLayoutParams", object : MethodHook() {
+        if (content == null) return
+        ModuleHelper.findAndHookMethod(folder, "resetViewsLayoutParams", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                val result = chain.proceed()
+                if (folderWidthEnabled) ModuleHelper.guarded {
+                    (content.get(chain.thisObject) as? View)?.let(::applyFolderWidth)
                 }
-                try {
-                    val thisObject = chain.getThisObject()
-
-                    setFolderWidth(thisObject)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return result
             }
         })
 
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.Folder", lpparam.classLoader, "onLayout", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                if (!folderWidthEnabled) { return XposedHelpers.throwOrReturn(throwable, result) }
-                try {
-                    val thisObject = chain.getThisObject()
+        if (fakeIcon == null) return
+        ModuleHelper.findAndHookMethod(folder, "onLayout",
+            Boolean::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!,
+            Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!,
+            folderLayoutHook(content, fakeIcon))
+    }
 
-                    if (!resolveFolderLayoutFields(thisObject)) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val mContent = folderContentField!!.get(thisObject) as GridView
-                    val mFakeIcon = folderFakeIconField!!.get(thisObject) as ImageView
-                    mFakeIcon.layout(mContent.left, mContent.top, mContent.right, mContent.top + mContent.width)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun folderLayoutHook(content: Field, fakeIcon: Field) = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            if (folderWidthEnabled) ModuleHelper.guarded {
+                val owner = chain.thisObject
+                val grid = content.get(owner) as? View ?: return@guarded
+                val icon = fakeIcon.get(owner) as? View ?: return@guarded
+                layoutFolderFakeIcon(grid, icon)
             }
-        })
+            return result
+        }
     }
 
     @JvmStatic

@@ -65,19 +65,53 @@ class StepCounterRefreshLifecycleTest {
     }
 
     @Test
-    fun ticksScreenCallbacksAndDelayedAttachCoalesceWhileProviderIsBlocked() {
+    fun bindingADetachedViewDoesNotActivateReceiversOrRefresh() {
+        val context = QueryContext(probe)
+        initialize(context)
+        val view = AttachedTextView()
+        StepCounterController.bindStepView(view)
+        scheduler.runCurrent()
+        assertTrue(context.receivers.isEmpty())
+        assertEquals(0, activeJobs())
+        assertEquals(0, probe.calls.get())
+    }
+
+    @Test
+    fun secondAttachmentKeepsTheFirstRefreshDeadline() {
+        val context = QueryContext(probe)
+        initialize(context)
+        val first = attachView()
+        scheduler.runCurrent()
+        scheduler.advanceTimeBy(2_500)
+        val second = attachView()
+        val query = blockNext(context)
+        scheduler.runCurrent()
+        scheduler.advanceTimeBy(500)
+        scheduler.runCurrent()
+
+        awaitEntered(query)
+        query.release.countDown()
+        awaitSettled(currentJob())
+        assertEquals(1, probe.calls.get())
+        assertEquals(first.listeners, second.listeners)
+    }
+
+    @Test
+    fun ticksReplaceTheInitialDelayAndCoalesceWhileProviderIsBlocked() {
         val context = QueryContext(probe)
         initialize(context)
         val firstView = attachView()
         val query = blockNext(context)
-        advanceAttachDelay()
+        tick(context)
         awaitEntered(query)
+        assertEquals("A real refresh supersedes the initial delay", 1, activeJobs())
 
         repeat(32) {
             tick(context)
             StepCounterController.onScreenStateChanged(true)
         }
         val secondView = attachView()
+        assertEquals("A second attached view needs no delayed work", 1, activeJobs())
         advanceAttachDelay()
 
         assertEquals("bursts must retain one refresh, not mutex waiters", 1, activeJobs())
@@ -219,7 +253,7 @@ class StepCounterRefreshLifecycleTest {
         val context = QueryContext(probe)
         initialize(context)
         context.registerFailure = IllegalStateException("screen registration unavailable")
-        val view = AttachedTextView()
+        val view = AttachedTextView(initiallyAttached = true)
         try {
             StepCounterController.bindStepView(view)
             fail("registration must report the failure")
@@ -234,7 +268,7 @@ class StepCounterRefreshLifecycleTest {
         assertTrue(context.receivers.isEmpty())
     }
 
-    private fun attachView() = AttachedTextView().also { StepCounterController.bindStepView(it) }
+    private fun attachView() = AttachedTextView(initiallyAttached = true).also { StepCounterController.bindStepView(it) }
 
     private fun blockNext(context: QueryContext) = QueryAttempt().also {
         attempts.add(it)
@@ -295,13 +329,21 @@ class StepCounterRefreshLifecycleTest {
     private fun controllerField(name: String) =
         StepCounterController::class.java.getDeclaredField(name).apply { isAccessible = true }
 
-    private class AttachedTextView : TextView(null) {
+    private class AttachedTextView(initiallyAttached: Boolean = false) : TextView(null) {
+        private var attached = initiallyAttached
         val listeners = ArrayList<View.OnAttachStateChangeListener>()
+        override fun isAttachedToWindow(): Boolean = attached
         override fun addOnAttachStateChangeListener(listener: View.OnAttachStateChangeListener) {
             listeners.add(listener)
         }
-        fun detach() = listeners.forEach { it.onViewDetachedFromWindow(this) }
-        fun attach() = listeners.forEach { it.onViewAttachedToWindow(this) }
+        fun detach() {
+            attached = false
+            listeners.forEach { it.onViewDetachedFromWindow(this) }
+        }
+        fun attach() {
+            attached = true
+            listeners.forEach { it.onViewAttachedToWindow(this) }
+        }
     }
 
     private class QueryAttempt {

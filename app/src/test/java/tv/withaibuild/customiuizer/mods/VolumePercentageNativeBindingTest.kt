@@ -3,10 +3,15 @@ package tv.withaibuild.customiuizer.mods
 import android.app.Application
 import android.text.Editable
 import android.text.TextWatcher
-import android.widget.SeekBar
+import android.widget.FrameLayout
 import android.widget.TextView
+import com.android.systemui.Dependency
+import com.android.systemui.controlcenter.phone.ControlPanelWindowManager
+import com.android.systemui.controlcenter.policy.MiuiBrightnessController
 import com.android.systemui.miui.volume.MiuiVolumeDialogImpl
+import com.android.systemui.plugins.miui.controlcenter.ToggleSliderBase
 import io.github.libxposed.api.XposedInterface
+import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -16,6 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.mods.utils.ReflectionCache
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.reflect.Executable
 import java.lang.reflect.Proxy
@@ -47,6 +53,7 @@ class VolumePercentageNativeBindingTest {
     }
 
     @After fun restore() {
+        Dependency.controlPanelWindowManager = null
         XposedHelpers.moduleInst = previous
         MainModule.mPrefs.replaceSnapshot(savedPrefs)
         for (name in listOf("mPctRef", "mPctOwnerRef", "volumePctFeedback")) {
@@ -72,6 +79,41 @@ class VolumePercentageNativeBindingTest {
     private fun label(dialog: MiuiVolumeDialogImpl): TextView =
         (0 until dialog.window.childCount).map { dialog.window.getChildAt(it) }.filterIsInstance<TextView>().single()
 
+    private fun TextView.onTextChange(action: () -> Unit) {
+        addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = action()
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+    }
+
+    @Test fun brightnessUsesTheNativeStartValueAndOnlyWritesNewPercentages() {
+        val loader = javaClass.classLoader
+        val container = FrameLayout(context)
+        Dependency.controlPanelWindowManager = ControlPanelWindowManager().apply { windowView!!.root = container }
+        ReflectionCache.onSafeLifecycle(loader)
+        val ready = Proxy.newProxyInstance(loader, arrayOf(PackageReadyParam::class.java)) { _, method, _ ->
+            if (method.name == "getClassLoader") loader else error(method.name)
+        } as PackageReadyParam
+        SystemUIControlCenterHooks.BrightnessPctHook(ready)
+
+        val controller = MiuiBrightnessController(context)
+        val slider = object : ToggleSliderBase {}
+        call(controller, "onStart", 512)
+        val pct = container.getChildAt(0) as TextView
+        assertEquals("50%", pct.text.toString())
+        var textChanges = 0
+        pct.onTextChange { textChanges++ }
+        for (level in 513..521) call(controller, "onChanged", slider, true, false, level, false)
+        assertEquals(0, textChanges)
+        call(controller, "onChanged", slider, true, false, 522, false)
+        assertEquals("51%", pct.text.toString())
+        assertEquals(1, textChanges)
+
+        call(controller, "onStop", 522)
+        assertEquals(0, container.childCount)
+    }
+
     @Test fun initialAndSameLevelShowsReadNativeStateWithoutAProgressCallback() {
         val dialog = MiuiVolumeDialogImpl(context)
         call(dialog, "showVolumeDialogH", 1)
@@ -87,11 +129,7 @@ class VolumePercentageNativeBindingTest {
         val dialog = MiuiVolumeDialogImpl(context)
         call(dialog, "showVolumeDialogH", 1)
         var textChanges = 0
-        label(dialog).addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { textChanges++ }
-            override fun afterTextChanged(s: Editable?) = Unit
-        })
+        label(dialog).onTextChange { textChanges++ }
         val column = dialog.mColumns[0]
         val listener = dialog.VolumeSeekBarChangeListener(column)
         repeat(100) { call(listener, "onProgressChanged", column.slider, 5000, true) }

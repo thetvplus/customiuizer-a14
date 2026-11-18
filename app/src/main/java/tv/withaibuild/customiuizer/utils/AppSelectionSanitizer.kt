@@ -74,7 +74,7 @@ object AppSelectionSanitizer {
                     for (item in value) if (item is String) selected.add(item)
                     val result = sanitizeSelection(selected, installedPackages)
                     sanitized[key] = result
-                    if (result != selected || result.size != selected.size) {
+                    if (result != selected) {
                         changedPrimaryCount++
                     }
                 }
@@ -133,7 +133,7 @@ object AppSelectionSanitizer {
                 }
             }
         }
-        if (changed > 0) editor.commit()
+        if (changed > 0) editor.apply()
         return changed
     }
 

@@ -7,6 +7,7 @@ import android.graphics.Rect
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -21,6 +22,7 @@ import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
+import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.ShakeManager
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.ref.WeakReference
@@ -121,7 +123,6 @@ object LauncherGestureHooks {
                 var skipped = false
                 var result: Any? = null
                 var throwable: Throwable? = null
-                val args = chain.args
                 val thisObject = chain.getThisObject()
                 try {
                     if (XposedHelpers.callMethod(thisObject, "isInNormalEditingMode") as Boolean) {
@@ -129,9 +130,8 @@ object LauncherGestureHooks {
                         return XposedHelpers.proceedOrThrow(chain, throwable)
                     }
                     val helperContext = (thisObject as ViewGroup).context
-                    var numOfFingers = 1
-                    if (args[1] != null) numOfFingers = (args[1] as MotionEvent).pointerCount
-                    val key = LauncherVerticalGesture.resolveKey(args[0] as Int, numOfFingers)
+                    val fingers = (chain.getArg(1) as? MotionEvent)?.pointerCount ?: 1
+                    val key = LauncherVerticalGesture.resolveKey(chain.getArg(0) as Int, fingers)
                     if (key != null && GlobalActions.handleAction(helperContext, key)) {
                         skipped = true
                         result = true
@@ -553,13 +553,11 @@ object LauncherGestureHooks {
         })
     }
 
-    class DoubleTapController(context: Context, actionKey: String) {
+    internal class DoubleTapController(context: Context) {
         private val MAX_DURATION = 500L
         private var mActionDownRawX: Float = 0f
         private var mActionDownRawY: Float = 0f
         private var mClickCount: Int = 0
-        val mContext: Context = context
-        private val mActionKey: String = actionKey
         private var mFirstClickRawX: Float = 0f
         private var mFirstClickRawY: Float = 0f
         private var mLastClickTime: Long = 0L
@@ -611,68 +609,44 @@ object LauncherGestureHooks {
             mClickCount = 0
             return false
         }
-
-        fun onDoubleTapEvent() {
-            GlobalActions.handleAction(mContext, mActionKey)
-        }
     }
 
     @JvmStatic
     fun LauncherDoubleTapHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllConstructors("com.miui.home.launcher.Workspace", lpparam.classLoader, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    throwable = t
-                    result = null
+        val workspaceClass = "com.miui.home.launcher.Workspace"
+        val detectorTag = ResourceHooks.getFakeResId("workspace_double_tap")
+        val screenIndexField = if (lpparam.packageName == "com.miui.home") "mCurrentScreenIndex" else "mCurrentScreen"
+
+        ModuleHelper.findAndHookConstructor(workspaceClass, lpparam.classLoader,
+            Context::class.java, AttributeSet::class.java, Int::class.javaPrimitiveType!!,
+            object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val result = chain.proceed()
+                    ModuleHelper.guarded {
+                        val workspace = chain.thisObject as View
+                        workspace.setTag(detectorTag, DoubleTapController(workspace.context))
+                    }
+                    return result
                 }
-                try {
-                    val thisObject = chain.getThisObject()
-                    val args = chain.args
+            })
 
-                    if (args.size != 3) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    var mDoubleTapControllerEx = XposedHelpers.getAdditionalInstanceField(thisObject, "mDoubleTapControllerEx")
-                    if (mDoubleTapControllerEx != null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    mDoubleTapControllerEx = DoubleTapController(args[0] as Context, "launcher_doubletap")
-                    XposedHelpers.setAdditionalInstanceField(thisObject, "mDoubleTapControllerEx", mDoubleTapControllerEx)
-
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    XposedHelpers.log(t)
+        ModuleHelper.findAndHookMethod(workspaceClass, lpparam.classLoader, "dispatchTouchEvent",
+            MotionEvent::class.java, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val workspace = chain.thisObject as View
+                    val detector = workspace.getTag(detectorTag) as? DoubleTapController
+                    if (detector != null && detector.isDoubleTapEvent(chain.getArg(0) as MotionEvent)) {
+                        ModuleHelper.guarded {
+                            val index = XposedHelpers.getIntField(workspace, screenIndexField)
+                            val cell = XposedHelpers.callMethod(workspace, "getCellLayout", index) ?: return@guarded
+                            if (XposedHelpers.callMethod(cell, "lastDownOnOccupiedCell") == true) return@guarded
+                            if (XposedHelpers.callMethod(workspace, "isInNormalEditingMode") == true) return@guarded
+                            GlobalActions.handleAction(workspace.context, "launcher_doubletap")
+                        }
+                    }
+                    return chain.proceed()
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("com.miui.home.launcher.Workspace", lpparam.classLoader, "dispatchTouchEvent", MotionEvent::class.java, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.getThisObject()
-                try {
-
-                    val mDoubleTapControllerEx = XposedHelpers.getAdditionalInstanceField(thisObject, "mDoubleTapControllerEx") as? DoubleTapController
-                    if (mDoubleTapControllerEx == null) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (!mDoubleTapControllerEx.isDoubleTapEvent(chain.getArg(0) as MotionEvent)) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    val mCurrentScreenIndex = XposedHelpers.getIntField(thisObject, if (lpparam.packageName == "com.miui.home") "mCurrentScreenIndex" else "mCurrentScreen")
-                    val cellLayout = XposedHelpers.callMethod(thisObject, "getCellLayout", mCurrentScreenIndex)
-                    if (XposedHelpers.callMethod(cellLayout, "lastDownOnOccupiedCell") as Boolean) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (XposedHelpers.callMethod(thisObject, "isInNormalEditingMode") as Boolean) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    mDoubleTapControllerEx.onDoubleTapEvent()
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+            })
     }
 
     @JvmStatic
@@ -684,15 +658,14 @@ object LauncherGestureHooks {
                 var skipped = false
                 var result: Any? = null
                 var throwable: Throwable? = null
-                val args = chain.args
                 val thisObject = chain.getThisObject()
                 try {
 
-                    val isDisabled = XposedHelpers.callStaticMethod(FsGestureHelper, "isAssistantGestureDisabled", args[2]) as Boolean
+                    val isDisabled = XposedHelpers.callStaticMethod(FsGestureHelper, "isAssistantGestureDisabled", chain.getArg(2)) as Boolean
                     if (!isDisabled) {
                         val mAssistantWidth = XposedHelpers.getIntField(thisObject, "mAssistantWidth")
-                        val f = args[0] as Float
-                        val f2 = args[1] as Float
+                        val f = chain.getArg(0) as Float
+                        val f2 = chain.getArg(1) as Float
                         if (f < mAssistantWidth || f > f2 - mAssistantWidth) {
                             skipped = true
                             result = true
@@ -717,7 +690,7 @@ object LauncherGestureHooks {
 
         val inDirection = intArrayOf(0)
 
-        ModuleHelper.hookAllMethods(FsGestureHelper, "handleTouchEvent", object : MethodHook() {
+        ModuleHelper.findAndHookMethod(FsGestureHelper, "handleTouchEvent", MotionEvent::class.java, View::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null

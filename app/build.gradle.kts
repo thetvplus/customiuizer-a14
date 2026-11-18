@@ -64,8 +64,8 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 310
-val lastVersionName = "r14.27.9"
+val lastVersion = 311
+val lastVersionName = "r14.27.10"
 
 fun resolveBuildRevision(): String {
     val prop = project.findProperty("buildRevision")?.toString()
@@ -386,15 +386,17 @@ dependencies {
     debugImplementation(libs.compose.test.manifest)
     constraints {
         // AGP's isolated lint tool does not inherit the root buildscript constraints.
-        // Constrain only this host configuration; keep APK and test graphs unchanged.
+        // Apply lint's constraints to its host configuration only.
         listOf(libs.host.guava, libs.commons.lang3, libs.host.bcprov, libs.host.bcpkix,
             libs.host.bcutil, libs.host.httpclient).forEach {
             add("androidLintTool", it) {
                 because("Use the patched versions already validated by the host build tools")
             }
         }
-        testImplementation(libs.host.guava) {
-            because("CVE-2026-102554; Robolectric's host-only transitive dependency")
+        listOf(libs.host.guava, libs.host.bcprov).forEach {
+            testImplementation(it) {
+                because("Use the patched versions of Robolectric's host-only dependencies")
+            }
         }
         implementation(libs.androidx.fragment.ktx) {
             because("Keep the transitive Fragment KTX companion aligned with Fragment")

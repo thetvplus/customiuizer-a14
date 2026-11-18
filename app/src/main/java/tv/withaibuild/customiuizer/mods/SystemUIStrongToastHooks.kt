@@ -38,8 +38,6 @@ object SystemUIStrongToastHooks {
     private const val RUNTIME_SNAPSHOT_FIELD = "customiuizer_strong_toast_runtime_snapshot"
     private const val MATCH_BASELINE_FIELD = "customiuizer_match_mode_baseline"
 
-    /** The ROM width remains an upper bound; collapsed forms share their content/safe-area rules. */
-
     @JvmField internal var snapshotRef: AtomicReference<StrongToastRuntimeSnapshot>? = null
     @JvmField internal var installed = false
 
@@ -114,79 +112,13 @@ object SystemUIStrongToastHooks {
                 override fun before(callback: BeforeHookCallback) {
                     val root = callback.getThisObject() as? View ?: return
                     try {
-                        // Shared by both mutating modes; a no-op when neither stored a baseline.
-                        resetMatchModeCapsule(root, updateWindow = false)
+                        resetMatchModeCapsule(root)
                     } finally {
                         XposedHelpers.removeAdditionalInstanceField(root, RUNTIME_SNAPSHOT_FIELD)
                     }
                 }
             }
         )
-    }
-
-    /**
-     * Where the island's top edge sits.
-     *
-     * The pill is anchored to the display cutout, top edge flush with the cutout's, so the camera
-     * sits inside the pill instead of the pill reading as a bar pinned to the screen edge.
-     *
-     * Status bar height is deliberately not an input. The island is a strong prompt and is taller
-     * than the status bar by design, so the bar is neither a meaningful anchor nor a container for
-     * it - and keeping it out means the status bar height feature cannot move the island.
-     *
-     * Displays reporting no cutout have nothing to anchor to, so the pill is centred in the vertical
-     * band the ROM itself reserved for the strong toast.
-     *
-     * [userOffsetPx] is the signed manual correction. Panels differ in how faithfully the declared
-     * cutout matches the visible camera hole, so the derived anchor is a starting point rather than
-     * the final word.
-     */
-    @JvmStatic
-    internal fun resolveIslandTopMarginPx(
-        cutoutTopPx: Int,
-        romWindowHeightPx: Int,
-        capsuleHeightPx: Int,
-        userOffsetPx: Int,
-    ): Int {
-        val anchor = when {
-            cutoutTopPx >= 0 -> cutoutTopPx
-            romWindowHeightPx <= 0 -> 0
-            else -> (romWindowHeightPx - capsuleHeightPx) / 2
-        }
-        return (anchor + userOffsetPx).coerceAtLeast(0)
-    }
-
-    /** Grows the ROM window only when the anchored island would not fit in what the ROM asked for. */
-    @JvmStatic
-    internal fun resolveIslandWindowHeightPx(
-        romWindowHeightPx: Int,
-        capsuleHeightPx: Int,
-        topMarginPx: Int,
-    ): Int {
-        if (romWindowHeightPx <= 0) return romWindowHeightPx
-        return maxOf(romWindowHeightPx, topMarginPx.coerceAtLeast(0) + capsuleHeightPx.coerceAtLeast(0))
-    }
-
-    /**
-     * Top edge of the camera hole itself, or -1 when the display reports no top cutout.
-     *
-     * Read from `currentWindowMetrics` rather than the View: `getWindowParam` runs before the
-     * StrongToast is attached, so its `rootWindowInsets` is still null. `boundingRectTop` is a single
-     * Rect, so no bounding-rect list is allocated.
-     *
-     * The rect's own top cannot be used. HyperOS declares the cutout as a slot running from the
-     * screen edge down past the camera - 68x104px around a 68px hole on this panel - so `top` is the
-     * screen edge and anchoring to it puts the island flush against it. A punch hole is circular, so
-     * its height equals its width and it starts that far above the rect's bottom. Displays that
-     * report the hole itself, or a wide notch, are unaffected: for both, the shorter side is already
-     * the height, which yields the rect's own top.
-     */
-    private fun displayCutoutTopPx(view: View): Int {
-        val wm = view.context?.getSystemService(WindowManager::class.java) ?: return -1
-        val cutout = wm.currentWindowMetrics.windowInsets.displayCutout ?: return -1
-        val rect = cutout.boundingRectTop
-        if (rect.isEmpty) return -1
-        return rect.bottom - minOf(rect.width(), rect.height())
     }
 
     private fun installStatusBarContentsCapture(lpparam: PackageReadyParam) {
@@ -320,9 +252,9 @@ object SystemUIStrongToastHooks {
         }
     }
 
-    internal fun resetMatchModeCapsule(root: View, updateWindow: Boolean = true) {
-        val capsule = findViewBySystemUiId(root, MESSAGE_CONTAINER_ID)
+    internal fun resetMatchModeCapsule(root: View) {
         val baseline = XposedHelpers.getAdditionalInstanceField(root, MATCH_BASELINE_FIELD) as? MatchModeBaseline ?: return
+        val capsule = findViewBySystemUiId(root, MESSAGE_CONTAINER_ID)
         resetMatchModeBaselineToViews(root, capsule, capsule?.parent as? ViewGroup, findViewBySystemUiId(root, FOREHEAD_BOTTOM_ID), baseline)
     }
 
@@ -340,13 +272,6 @@ object SystemUIStrongToastHooks {
         val id = root.resources.getIdentifier(name, "id", SYSTEM_UI_PACKAGE)
         return if (id == 0) null else root.findViewById(id)
     }
-
-    private fun strongToastDimensionPx(root: View, name: String): Int {
-        val id = root.resources.getIdentifier(name, "dimen", SYSTEM_UI_PACKAGE)
-        return if (id == 0) 0 else root.resources.getDimensionPixelSize(id)
-    }
-
-    private fun dpToPx(view: View, dp: Float): Int = (dp * view.resources.displayMetrics.density + 0.5f).toInt()
 
     @JvmStatic internal fun resolveMatchContentHeightPx(statusBarHeightPx: Int, chinHeightPx: Int): Int {
         val status = statusBarHeightPx.coerceAtLeast(0)

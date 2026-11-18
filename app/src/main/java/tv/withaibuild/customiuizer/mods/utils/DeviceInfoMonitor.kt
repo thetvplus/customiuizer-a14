@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
@@ -20,6 +21,7 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallba
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.util.Properties
+import java.lang.reflect.Field
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -115,7 +117,6 @@ object DeviceInfoMonitor {
     )
 
     private val firstLifecycleLog = AtomicBoolean(false)
-    private val firstConstructorLog = AtomicBoolean(false)
     private val firstIconGraphLog = AtomicBoolean(false)
     private val firstTickLog = AtomicBoolean(false)
     private val firstType92ViewLog = AtomicBoolean(false)
@@ -269,11 +270,21 @@ object DeviceInfoMonitor {
             lpparam.classLoader
         )
 
-        ModuleHelper.hookAllConstructors(
-            "com.android.systemui.statusbar.policy.NetworkSpeedController",
+        val typeField = XposedHelpers.findFieldIfExists(StatusBarIconHolder, "mType") ?: return
+        val addHolder = ModuleHelper.findAndHookMethod(
+            "com.android.systemui.statusbar.phone.StatusBarIconController\$IconManager",
+            lpparam.classLoader,
+            "addHolder",
+            Int::class.javaPrimitiveType!!, String::class.java, Boolean::class.javaPrimitiveType!!,
+            StatusBarIconHolder, createIconHolderHook(typeField),
+        )
+        if (addHolder == null) return
+
+        hookNetworkSpeedConstructor(
             lpparam.classLoader,
             object : MethodHook() {
                 override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null) return
                     val iconController = XposedHelpers.getObjectField(
                         callback.getThisObject(),
                         "mStatusBarIconController"
@@ -300,33 +311,15 @@ object DeviceInfoMonitor {
                 }
             }
         )
-
-        ModuleHelper.hookAllMethods(
-            "com.android.systemui.statusbar.phone.StatusBarIconController\$IconManager",
-            lpparam.classLoader,
-            "addHolder",
-            object : MethodHook() {
-                override fun before(callback: BeforeHookCallback) = interceptAddHolder(callback)
-            }
-        )
     }
 
-    private fun interceptAddHolder(param: BeforeHookCallback) {
-        // We only care about our custom icon types; for everything else the ROM's original
-        // implementation is the right path.
-        val args = param.getArgs()
-        if (args.isEmpty()) return
+    internal fun createIconHolderHook(typeField: Field) = object : MethodHook() {
+        override fun before(callback: BeforeHookCallback) = interceptAddHolder(callback, typeField)
+    }
 
-        val iconHolderArg = args.find { it?.javaClass?.simpleName?.contains("StatusBarIconHolder") == true } ?: return
-        val type = try {
-            XposedHelpers.getIntField(iconHolderArg, "mType")
-        } catch (oom: OutOfMemoryError) {
-            throw oom
-        } catch (t: Throwable) {
-            FatalErrors.unwrapAndRethrowIfFatal(t)
-            // We cannot determine the type; let the original method handle it.
-            return
-        }
+    private fun interceptAddHolder(param: BeforeHookCallback, typeField: Field) {
+        val iconHolder = param.getArg(3) ?: return
+        val type = typeField.getInt(iconHolder)
         if (type != 91 && type != 92) return
 
         // Confirmed custom type. The whole custom handling path is in a fatal-aware boundary;
@@ -342,9 +335,7 @@ object DeviceInfoMonitor {
                 return
             }
 
-            // Find the insertion index. The first argument is the index in every known signature;
-            // if it is not an int, default to 0 and clamp it below.
-            val requestedIndex = (args[0] as? Int) ?: 0
+            val requestedIndex = param.getArg(0) as Int
 
             // If a custom icon with the same type already lives in this group, reuse it.
             for (j in 0 until group.childCount) {
@@ -450,38 +441,26 @@ object DeviceInfoMonitor {
      */
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun hookMonitor(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllConstructors(
-            "com.android.systemui.statusbar.policy.NetworkSpeedController",
-            lpparam.classLoader,
-            object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    val args = callback.getArgs()
-                    if (firstConstructorLog.compareAndSet(false, true)) {
-                        val argClasses = args.mapIndexed { index, value ->
-                            "ARG${index}_CLASS=${value?.javaClass?.name ?: "null"}"
-                        }
-                        XposedHelpers.log(
-                            "DeviceInfoMonitor: NETWORK_SPEED_CONTROLLER_CONSTRUCTOR " +
-                                argClasses.joinToString(" ")
-                        )
-                    }
-                    val mContext = resolveNetworkSpeedControllerContext(args) ?: return
-                    val bgHandler = try {
-                        XposedHelpers.getObjectField(callback.getThisObject(), "mBgHandler") as? Handler
-                    } catch (oom: OutOfMemoryError) {
-                        throw oom
-                    } catch (t: Throwable) {
-                        FatalErrors.unwrapAndRethrowIfFatal(t)
-                        null
-                    }
-                    val looper = resolveNetworkSpeedControllerLooper(args, bgHandler) ?: return
-                    XposedHelpers.log("DeviceInfoMonitor: MONITOR_CONSTRUCTOR_REACHED")
-
-                    startMonitoring(mContext, looper)
-                }
+        hookNetworkSpeedConstructor(lpparam.classLoader, object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val context = callback.getArg(0) as Context
+                val looper = callback.getArg(1) as Looper
+                startMonitoring(context, looper)
             }
-        )
+        })
     }
+
+    private fun hookNetworkSpeedConstructor(loader: ClassLoader, hook: MethodHook) =
+        ModuleHelper.findAndHookConstructor(
+            "com.android.systemui.statusbar.policy.NetworkSpeedController", loader,
+            Context::class.java, Looper::class.java,
+            "com.android.systemui.statusbar.phone.StatusBarIconController",
+            java.util.concurrent.Executor::class.java,
+            "com.android.systemui.settings.UserTracker", ConnectivityManager::class.java,
+            "com.android.systemui.statusbar.policy.MinimalismModeController",
+            "com.android.systemui.dump.DumpManager", hook,
+        )
 
     private fun startMonitoring(mContext: Context, looper: Looper) {
         synchronized(monitorLock) {
@@ -813,24 +792,4 @@ internal fun resolveDeviceInfoPlacement(
         batteryAtLeft = showBatteryDetail && controllerLeftRight && !batteryAtRightPref,
         tempAtLeft = showDeviceTemp && controllerLeftRight && !tempAtRightPref,
     )
-}
-
-internal fun findUniqueInstance(args: Array<Any?>, matcher: (Any) -> Boolean): Any? {
-    var found: Any? = null
-    for (arg in args) {
-        if (arg != null && matcher(arg)) {
-            if (found != null) return null
-            found = arg
-        }
-    }
-    return found
-}
-
-internal fun resolveNetworkSpeedControllerContext(args: Array<Any?>): Context? =
-    findUniqueInstance(args) { it is Context } as? Context
-
-internal fun resolveNetworkSpeedControllerLooper(args: Array<Any?>, bgHandler: Handler?): Looper? {
-    (findUniqueInstance(args) { it is Looper } as? Looper)?.let { return it }
-    (findUniqueInstance(args) { it is Handler } as? Handler)?.looper?.let { return it }
-    return bgHandler?.looper
 }

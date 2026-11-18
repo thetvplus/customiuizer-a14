@@ -12,9 +12,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class LauncherDoubleTapBoundaryTest {
-    private val detector = LauncherGestureHooks.DoubleTapController(
-        RuntimeEnvironment.getApplication(), "launcher_doubletap"
-    )
+    private val detector = LauncherGestureHooks.DoubleTapController(RuntimeEnvironment.getApplication())
 
     private fun event(action: Int, down: Long, time: Long, x: Float = 50f): Boolean {
         val event = MotionEvent.obtain(down, time, action, x, 50f, 0)

@@ -38,24 +38,6 @@ class StrongToastPresentationModeTest {
     }
 
     @Test
-    fun islandTopMarginAnchorsToCutoutAndAppliesSignedUserOffset() {
-        assertEquals(36, SystemUIStrongToastHooks.resolveIslandTopMarginPx(36, 208, 141, 0))
-        assertEquals(46, SystemUIStrongToastHooks.resolveIslandTopMarginPx(36, 208, 141, 10))
-        assertEquals(26, SystemUIStrongToastHooks.resolveIslandTopMarginPx(36, 208, 141, -10))
-        assertEquals(0, SystemUIStrongToastHooks.resolveIslandTopMarginPx(36, 208, 141, -100))
-        assertEquals(33, SystemUIStrongToastHooks.resolveIslandTopMarginPx(-1, 208, 141, 0))
-        assertEquals(8, SystemUIStrongToastHooks.resolveIslandTopMarginPx(-1, 0, 141, 8))
-        assertEquals(0, SystemUIStrongToastHooks.resolveIslandTopMarginPx(-1, 0, 141, -8))
-    }
-
-    @Test
-    fun islandWindowGrowsOnlyWhenTheAnchoredPillWouldNotFit() {
-        assertEquals(208, SystemUIStrongToastHooks.resolveIslandWindowHeightPx(208, 141, 36))
-        assertEquals(241, SystemUIStrongToastHooks.resolveIslandWindowHeightPx(208, 141, 100))
-        assertEquals(-2, SystemUIStrongToastHooks.resolveIslandWindowHeightPx(-2, 141, 36))
-    }
-
-    @Test
     fun dynamicIslandDoesNotCreateOrReshapeAnyNativeForeheadWindow() {
         val hooks = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStrongToastHooks.kt")
         assertTrue(hooks.contains("StrongToastPresentationMode.DYNAMIC_ISLAND -> Unit"))

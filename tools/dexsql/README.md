@@ -21,12 +21,13 @@
 | `duo_statusbar_contract.sql` | A14 SystemUI | Duo 网络、订阅、电池与可选蓝牙合同；完整描述符及字段定义。 |
 | `volume_contract.sql` | SystemUI 宿主 + plugin APK | 查询按钮、计时器、超时 / 无障碍、窗口模糊及百分比 owner 声明；宿主亮度与插件音量分别确认来源。宽度资源 ID、默认材质和关闭时序须结合 Smali。 |
 | `control_center_collapse_contract.sql` | A14 SystemUI | 自动收起的原生 click 与异步状态提示出口；结合 Smali 区分业务刷新和晚到的 Header 提示。 |
+| `control_center_resource_contract.sql` | A14 控制中心 plugin | 页眉、步数和磁贴的实现声明、资源字段与继承；使用 AAPT2 核对同一插件的资源表。 |
 | `launcher_dock_contract.sql` | Launcher、必要时加入 SystemUI / framework | Dock 显示、编辑 / 拖拽、几何与材质；原图标 / FloatingIconView2 的隐藏、取消 / merge / 换目标清理、实例字段读写与坐标消费者，以及原生焦点通知 IPC。结合完整 decode 确认 owner，不由异步 lambda 或 skip 标志名称推断竞态，不推进动画或强制显示图标。 |
 | `launcher_unlock_contract.sql` | Launcher | HotSeats 解锁参与者、V12 原生准备 / 弹簧 / 重置与属性更新；背景交由同一原生控制器，不能把编辑 AnimationSet 当作解锁链。 |
 | `launcher_recents_deck_contract.sql` | A14 Launcher | Deck 类继承、完整方法 / 字段描述符、内容 alpha 与触摸 / 回弹直接调用者及字段读写；用关键 Smali 确认调用顺序，按样本哈希比较，不跨 Dataset 连接局部索引。 |
 | `navigation_gestures_contract.sql` | Launcher | 返回区域初始化 / setSize、侧滑停顿、快速切换和输入声明；核对无参初始化、字段重置及配置变化调用者。 |
 | `home_indicator_contract.sql` | A14 SystemUI、MiuiHome / POCO | 普通 NavigationHandle、Quick Switch 独立窗口及横屏最近任务 FakeNavigationBarView 的绘制与可见性入口；结合 Smali 和实机明确每个 owner。 |
-| `statusbar_layout_refresh.sql` | SystemUI | Insets / 开孔、布局重建、网络订阅与电池回调声明；保留各 owner 的失效与刷新边界。 |
+| `statusbar_layout_refresh.sql` | SystemUI | Insets / 开孔、布局重建、网络订阅与电池回调声明，以及双卡图标状态与原生绘制调用。 |
 | `statusbar_gestures_contract.sql` | SystemUI + 控制中心 plugin | 状态栏拦截 / 触摸分发、插件 owner 的 attach / destroy 与 external 标志调用；独立于 Launcher 导航链。 |
 | `toast_presentation_contract.sql` | SystemUI 与 boot framework.jar | 普通 Toast 的窗口插入 / 回收、旋转重排、安全区与原生 StrongToast 文本模型；decode 核对 text_bitmap 分支、展示门禁、队列和 finishToken，不能只凭方法存在判定兼容。 |
 | `island_activity_contract.sql` | 双区域 SystemUI 与 boot framework.jar | 原生主播放器、媒体 / 状态栏 / Keyguard 回调及通知接管字段；decode 复核独立锁屏门禁、bind 提交、Heads-up 内容释放与列表可见性的边界。 |

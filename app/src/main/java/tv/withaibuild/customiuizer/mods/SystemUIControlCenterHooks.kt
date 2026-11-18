@@ -6,6 +6,7 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -39,20 +40,18 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
-import java.util.concurrent.ConcurrentHashMap
 import tv.withaibuild.customiuizer.mods.volume.IosVolumeStyle
 import tv.withaibuild.customiuizer.mods.volume.VolumePercentageFeedback
 import tv.withaibuild.customiuizer.mods.island.DynamicIslandStatusBarFade
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
 import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.HookDiagnostics
-import tv.withaibuild.customiuizer.mods.utils.HookInstallStateMachine
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.StepCounterController
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.util.ArrayList
-import java.util.Comparator
+import java.util.Locale
 import java.lang.System
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -601,26 +600,24 @@ object SystemUIControlCenterHooks {
         ) {
             VolumeModeButtonColorsHook(loader)
         }
-        if (MainModule.mPrefs.getBoolean("system_cc_tile_roundedrect")) {
-            CCTileCornerHook(loader)
-        }
         if (MainModule.mPrefs.getBoolean("system_cc_volume_showpct")) {
             ShowVolumePctHook(loader)
         }
-        if (MainModule.mPrefs.getBoolean("system_qs_hideoperator")
-            || MainModule.mPrefs.getBoolean("system_cc_hideoperator_delimiter")
-            || MainModule.mPrefs.getBoolean("system_cc_show_stepcount")
-        ) {
-            CCHeaderHook(loader)
+        val hideOperator = MainModule.mPrefs.getBoolean("system_qs_hideoperator")
+        val hideDelimiter = MainModule.mPrefs.getBoolean("system_cc_hideoperator_delimiter")
+        val showSteps = MainModule.mPrefs.getBoolean("system_cc_show_stepcount")
+        if (hideOperator || hideDelimiter || showSteps) {
+            CCHeaderHook(loader, hideOperator, hideDelimiter, showSteps)
         }
-        val customCCGrid = MainModule.mPrefs.getInt("system_ccgridcolumns", 4) > 4
-        if (customCCGrid) {
-            SystemCCGridHookLoader(loader)
-        }
-        if (MainModule.mPrefs.getBoolean("system_cc_hide_edit")
-            || MainModule.mPrefs.getBoolean("system_cc_hide_profile_monitoring")
-        ) {
-            CCHideEditButtonHook(loader)
+        val gridColumns = MainModule.mPrefs.getInt("system_ccgridcolumns", 4)
+        val customGrid = hookPanelContent(
+            loader,
+            gridColumns,
+            hideEdit = MainModule.mPrefs.getBoolean("system_cc_hide_edit"),
+            hideSecurity = MainModule.mPrefs.getBoolean("system_cc_hide_profile_monitoring"),
+        )
+        if (MainModule.mPrefs.getBoolean("system_cc_tile_roundedrect")) {
+            CCTileCornerHook(loader, if (customGrid) 4f / gridColumns else 1f)
         }
         if (MainModule.mPrefs.getBoolean("system_cc_btandtorch_ascard")) {
             CCBluetoothAsCardHook(loader)
@@ -636,95 +633,111 @@ object SystemUIControlCenterHooks {
         }
     }
 
-    @JvmStatic
-    fun CCHeaderHook(classLoader: ClassLoader) {
-        val hideOperator = MainModule.mPrefs.getBoolean("system_qs_hideoperator")
-        val hideDelimiter = MainModule.mPrefs.getBoolean("system_cc_hideoperator_delimiter")
-        val showStep = MainModule.mPrefs.getBoolean("system_cc_show_stepcount")
-        val stepViewId = ResourceHooks.getFakeResId("cc_step_view")
-        val tag = "StepInControlCenter"
-        val hideViewHook = object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val headerView = XposedHelpers.callMethod(callback.getThisObject(), "getView") as ViewGroup
-                if (hideOperator || hideDelimiter) {
-                    val resId = headerView.resources.getIdentifier("header_carrier_view", "id", "miui.systemui.plugin")
-                    val mCarrierText = headerView.findViewById<TextView>(resId)
-                    if (hideOperator) {
-                        mCarrierText.text = ""
-                    } else {
-                        mCarrierText.text = mCarrierText.text.toString().replace(" | ", "")
-                    }
-                }
-                if (showStep) {
-                    val stepView = headerView.findViewWithTag<TextView>(tag)
-                    if (stepView != null) {
-                        val promptInfo = XposedHelpers.getObjectField(callback.getThisObject(), "promptInfo")
-                        val miuiPromptInfo = XposedHelpers.getObjectField(callback.getThisObject(), "miuiPromptInfo")
-                        var viz = View.GONE
-                        if (promptInfo == null && miuiPromptInfo == null) {
-                            val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", classLoader)
-                            val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                            val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", headerView.context) as Boolean
-                            if (verticalMode) {
-                                viz = View.VISIBLE
-                            }
+    internal fun CCHeaderHook(classLoader: ClassLoader, hideOperator: Boolean, hideDelimiter: Boolean, showStep: Boolean) =
+        ModuleHelper.guarded {
+            val controller = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader)
+            if (hideOperator || hideDelimiter) {
+                val setCarrierText = controller.getDeclaredMethod(
+                    "onCreate\$lambda-2\$lambda-0", controller, String::class.java,
+                )
+                ModuleHelper.hookMethod(setCarrierText, object : MethodHook() {
+                    override fun before(callback: BeforeHookCallback) {
+                        val text = callback.getArg(1) as String?
+                        if (hideOperator) {
+                            if (text != "") callback.getArgs()[1] = ""
+                        } else if (text?.contains(" | ") == true) {
+                            callback.getArgs()[1] = text.replace(" | ", "")
                         }
-                        stepView.visibility = viz
                     }
+                })
+            }
+            if (showStep) hookHeaderSteps(classLoader, controller)
+        }
+
+    private const val HEADER_STEP_VIEW = "controlCenterStepView"
+
+    @SuppressLint("AppCompatCustomView") // Created programmatically inside the SystemUI plugin with its native theme.
+    private class HeaderStepView(val carrier: TextView) : TextView(carrier.context)
+
+    private fun hookHeaderSteps(loader: ClassLoader, controller: Class<*>) {
+        val getView = controller.getMethod("getView")
+        val ids = XposedHelpers.findClass("miui.systemui.controlcenter.R\$id", loader)
+        val carrierId = ids.getDeclaredField("header_carrier_view").getInt(null)
+        val iconsId = ids.getDeclaredField("header_status_bar_icons").getInt(null)
+        val styles = XposedHelpers.findClass("miui.systemui.controlcenter.R\$style", loader)
+        val textAppearance = styles.getDeclaredField("TextAppearance_Header_Text").getInt(null)
+        val layoutParams = XposedHelpers.findClass("androidx.constraintlayout.widget.ConstraintLayout\$LayoutParams", loader)
+        val newParams = layoutParams.getConstructor(Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+        val bottomToTop = layoutParams.getDeclaredField("bottomToTop")
+        val endToStart = layoutParams.getDeclaredField("endToStart")
+        val stepViewId = ResourceHooks.getFakeResId("cc_step_view")
+
+        fun boundStep(owner: Any?) =
+            (XposedHelpers.getAdditionalInstanceField(owner, HEADER_STEP_VIEW) as? WeakReference<*>)?.get() as? HeaderStepView
+
+        val createStep = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val owner = callback.getThisObject()
+                val header = getView.invoke(owner) as ViewGroup
+                if (boundStep(owner)?.parent === header) return
+                val carrier = header.findViewById<TextView>(carrierId) ?: return
+                val stepView = HeaderStepView(carrier).apply {
+                    id = stepViewId
+                    visibility = View.GONE
+                    setTextAppearance(textAppearance)
                 }
+                val wrapContent = ViewGroup.LayoutParams.WRAP_CONTENT
+                val params = newParams.newInstance(wrapContent, wrapContent) as ViewGroup.MarginLayoutParams
+                bottomToTop.setInt(params, iconsId)
+                endToStart.setInt(params, carrierId)
+                header.addView(stepView, params)
+                XposedHelpers.setAdditionalInstanceField(owner, HEADER_STEP_VIEW, WeakReference(stepView))
+                StepCounterController.bindStepView(stepView)
             }
         }
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader, "adjustCarrierOrPrompt", hideViewHook)
-
-        if (showStep) {
-            ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader, "onExpandChange", Float::class.javaPrimitiveType!!, object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    val headerView = XposedHelpers.callMethod(callback.getThisObject(), "getView") as ViewGroup
-                    val stepView = headerView.findViewWithTag<TextView>(tag)
-                    if (stepView != null) {
-                        stepView.translationY = callback.getArg(0) as Float
-                    }
-                }
-            })
-            val initStepViewHook = object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    val headerView = XposedHelpers.callMethod(callback.getThisObject(), "getView") as ViewGroup
-                    var stepView = headerView.findViewWithTag<TextView>(tag)
-                    if (stepView == null) {
-                        stepView = TextView(headerView.context)
-                        stepView.id = stepViewId
-                        val res = headerView.resources
-                        val styleId = res.getIdentifier("TextAppearance.Header.Text", "style", "miui.systemui.plugin")
-                        stepView.setTextAppearance(styleId)
-                        stepView.setTag(tag)
-                        headerView.addView(stepView)
-                        StepCounterController.bindStepView(stepView)
-                    }
-                }
+        val adjustVisibility = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val step = boundStep(callback.getThisObject()) ?: return
+                val carrier = step.carrier
+                // Only the vertical carrier is anchored above the icons. Its visibility already reflects privacy prompts.
+                val aboveIcons = bottomToTop.getInt(carrier.layoutParams) == iconsId
+                val visibility = if (aboveIcons && carrier.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+                if (step.visibility != visibility) step.visibility = visibility
             }
-            ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader, "createStatusBarViews", initStepViewHook)
-
-            ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader, "updateConstraint", object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    val headerView = XposedHelpers.callMethod(callback.getThisObject(), "getView") as ViewGroup
-                    val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", classLoader)
-                    val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                    val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", headerView.context) as Boolean
-                    if (verticalMode) {
-                        val ConstraintSetClass = classLoader.loadClass("androidx.constraintlayout.widget.ConstraintSet")
-                        val constraintSet = XposedHelpers.newInstance(ConstraintSetClass)
-                        XposedHelpers.callMethod(constraintSet, "clone", headerView)
-                        val carrierId = headerView.resources.getIdentifier("header_carrier_view", "id", "miui.systemui.plugin")
-                        val iconsId = headerView.resources.getIdentifier("header_status_bar_icons", "id", "miui.systemui.plugin")
-                        val dimId = headerView.resources.getIdentifier("header_carrier_vertical_mode_margin_bottom", "dimen", "miui.systemui.plugin")
-                        val marginBottom = headerView.resources.getDimensionPixelSize(dimId)
-                        XposedHelpers.callMethod(constraintSet, "connect", stepViewId, 4, iconsId, 3, marginBottom)
-                        XposedHelpers.callMethod(constraintSet, "connect", stepViewId, 7, carrierId, 6, HookUtils.dp2px(4f).toInt())
-                        XposedHelpers.callMethod(constraintSet, "applyTo", headerView)
-                    }
-                }
-            })
         }
+        val adjustMargins = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val step = boundStep(callback.getThisObject()) ?: return
+                val carrierParams = step.carrier.layoutParams as ViewGroup.MarginLayoutParams
+                if (bottomToTop.getInt(carrierParams) != iconsId) return
+                val params = step.layoutParams as ViewGroup.MarginLayoutParams
+                val endMargin = (4f * step.resources.displayMetrics.density).toInt()
+                if (params.bottomMargin == carrierParams.bottomMargin && params.marginEnd == endMargin) return
+                params.bottomMargin = carrierParams.bottomMargin
+                params.marginEnd = endMargin
+                step.layoutParams = params
+            }
+        }
+        val translateStep = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    val step = boundStep(chain.thisObject) ?: return@guarded
+                    val translation = chain.getArg(0) as Float
+                    if (step.translationY != translation) step.translationY = translation
+                }
+                return result
+            }
+        }
+        check(PreparedHookBatch().install(listOf(
+            controller.getDeclaredMethod("createStatusBarViews") to createStep,
+            controller.getDeclaredMethod("adjustCarrierOrPrompt") to adjustVisibility,
+            controller.getDeclaredMethod("updateConstraint") to adjustMargins,
+            controller.getDeclaredMethod("onExpandChange", Float::class.javaPrimitiveType) to translateStep,
+        )).isActive)
     }
 
     @JvmStatic
@@ -1148,282 +1161,331 @@ object SystemUIControlCenterHooks {
         ControlCenterPluginRuntime.hookIfNeeded(lpparam)
     }
 
-    private var iconScaleRatio = 1f
+    private fun prepareGridTileSizing(pluginLoader: ClassLoader, scale: Float): List<Pair<Method, MethodHook>> {
+        val tileClass = XposedHelpers.findClass("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader)
+        val resourceIds = XposedHelpers.findClass("miui.systemui.controlcenter.R\$id", pluginLoader)
+        val iconFrameId = resourceIds.getDeclaredField("icon_frame").getInt(null)
+        val findCachedView = tileClass.getDeclaredMethod("_\$_findCachedViewById", Int::class.javaPrimitiveType)
+        val containerHeight = tileClass.getDeclaredField("containerHeight").apply { isAccessible = true }
+        val changeExpand = tileClass.getDeclaredMethod("changeExpand").apply { isAccessible = true }
+        val iconDp = 68f * scale
+        val heightDp = 85f * scale + 1f
 
-    @JvmStatic
-    fun SystemCCGridHookLoader(pluginLoader: ClassLoader) {
-        val cols = MainModule.mPrefs.getInt("system_ccgridcolumns", 4)
-        iconScaleRatio = 4f / cols
-        val resizeIconFrame = object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val thisView = callback.getThisObject() as FrameLayout
-                val resId = thisView.resources.getIdentifier("icon_frame", "id", "miui.systemui.plugin")
-                val iconFrame = thisView.findViewById<View>(resId)
-                val iconSize = HookUtils.dp2px(68f * iconScaleRatio).toInt()
-                iconFrame.layoutParams.width = iconSize
-                iconFrame.layoutParams.height = iconSize
-
-                if (callback.getMember().name == "onFinishInflate") {
-                    XposedHelpers.callMethod(thisView, "changeExpand")
-                }
-            }
-        }
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader, "updateSize", resizeIconFrame)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader, "onFinishInflate", resizeIconFrame)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader, "updateContainerHeight", object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val iconSize = HookUtils.dp2px(85f * iconScaleRatio + 1).toInt()
-                XposedHelpers.setObjectField(callback.getThisObject(), "containerHeight", iconSize)
-            }
-        })
-
-        // The A14 plugin accepts nullable java.lang.Boolean, not primitive boolean.
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader, "setUseSeparatedPanels", Boolean::class.javaObjectType, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                if (callback.getArgs().isEmpty() || callback.getArg(0) == null) {
-                    callback.returnAndSkip(null)
-                    return
-                }
-                val bool = callback.getArg(0) as? Boolean ?: return
-                val oldVal = XposedHelpers.getObjectField(callback.getThisObject(), "useSeparatedPanels")
-                if (bool == oldVal) {
-                    callback.returnAndSkip(null)
-                    return
-                }
-                XposedHelpers.setObjectField(callback.getThisObject(), "useSeparatedPanels", bool)
-                val horizontalMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "horizontalMainPanel") as LinearLayout
-                val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                horizontalMainPanel.removeView(leftMainPanel)
-                if (!bool) {
-                    horizontalMainPanel.addView(leftMainPanel)
-                    val layoutParams = leftMainPanel.layoutParams
-                    (layoutParams as ViewGroup.MarginLayoutParams).setMarginEnd(0)
-                    horizontalMainPanel.orientation = LinearLayout.VERTICAL
-                } else {
-                    horizontalMainPanel.addView(leftMainPanel, 0)
-                    val marginId = horizontalMainPanel.resources.getIdentifier("control_center_horizontal_margin_center", "dimen", "miui.systemui.plugin")
-                    val marginEnd = horizontalMainPanel.resources.getDimensionPixelSize(marginId)
-                    XposedHelpers.setObjectField(callback.getThisObject(), "panelMargin", marginEnd)
-                    val layoutParams = leftMainPanel.layoutParams
-                    (layoutParams as ViewGroup.MarginLayoutParams).setMarginEnd(marginEnd)
-                    horizontalMainPanel.orientation = LinearLayout.HORIZONTAL
-                }
-                callback.returnAndSkip(null)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, "distributePanels", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val horizontal = callback.getArg(0) as Boolean
-                if (!horizontal && XposedHelpers.getBooleanField(callback.getThisObject(), "inited")) {
-                    val rightPanelContent = XposedHelpers.getObjectField(callback.getThisObject(), "rightPanelContent") as ArrayList<*>
-                    val leftPanelContent = XposedHelpers.getObjectField(callback.getThisObject(), "leftPanelContent") as ArrayList<Any>
-                    val size = rightPanelContent.size
-                    for (i in size - 1 downTo 0) {
-                        val controller = rightPanelContent[i]
-                        val className = controller?.javaClass?.canonicalName ?: ""
-                        if (className.contains("EditButtonController")
-                            || className.contains("SecurityFooterController")
-                            || className.contains("QSListController")
-                        ) {
-                            rightPanelContent.removeAt(i)
-                            leftPanelContent.add(controller)
-                        } else if (className.contains("FooterSpaceController")) {
-                            rightPanelContent.removeAt(i)
-                        }
-                    }
-                    leftPanelContent.sortWith(Comparator { lhs, rhs ->
-                        val leftPriority = XposedHelpers.callMethod(lhs, "getPriority") as Int
-                        val rightPriority = XposedHelpers.callMethod(rhs, "getPriority") as Int
-                        leftPriority - rightPriority
-                    })
-                }
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader, "updatePanelSize", object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val useSeparatedPanels = XposedHelpers.getObjectField(callback.getThisObject(), "useSeparatedPanels") as? Boolean
-                if (useSeparatedPanels != true) {
-                    val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                    val rightMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "rightMainPanel") as ViewGroup
-                    val panelWidth = XposedHelpers.getIntField(callback.getThisObject(), "panelWidth")
-                    leftMainPanel.layoutParams.width = panelWidth
-                    leftMainPanel.layoutParams.height = -2
-                    rightMainPanel.layoutParams.width = panelWidth
-                    rightMainPanel.layoutParams.height = -2
-                    callback.returnAndSkip(null)
-                }
-            }
-        })
-
-        val MainPanelAdapter = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.recyclerview.MainPanelAdapter", pluginLoader)
-
-        val spanSizeHook = object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val adapter = XposedHelpers.getSurroundingThis(callback.getThisObject())
-                val leftAdapter = XposedHelpers.getAdditionalInstanceField(adapter, "leftAdapter") != null
-                if (leftAdapter) {
-                    val companion = XposedHelpers.getStaticObjectField(MainPanelAdapter, "Companion")
-                    val contentMap = XposedHelpers.getObjectField(adapter, "contentMap")
-                    if (callback.getArgs().isEmpty()) {
-                        callback.returnAndSkip(cols)
-                        return
-                    }
-                    val panelItem = XposedHelpers.callMethod(companion, "getItem", contentMap, callback.getArg(0))
-                    if (panelItem == null) {
-                        callback.returnAndSkip(cols)
-                    } else {
-                        callback.returnAndSkip(XposedHelpers.callMethod(panelItem, "getSpanSize"))
-                    }
-                }
-            }
+        fun resizeIconFrame(tile: View) {
+            val iconFrame = findCachedView.invoke(tile, iconFrameId) as? View ?: return
+            val size = (iconDp * tile.resources.displayMetrics.density).toInt()
+            val params = iconFrame.layoutParams
+            if (params.width == size && params.height == size) return
+            params.width = size
+            params.height = size
         }
 
-        val spanHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
-        ModuleHelper.hookAllConstructors("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, object : MethodHook() {
-            override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+        val updateSize = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() == null) resizeIconFrame(callback.getThisObject() as View)
+            }
+        }
+        val finishInflate = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() != null) return
-                configureLeftPanelColumns(callback.getThisObject() ?: return, cols) { lookupClass ->
-                    spanHooks.getOrPut(lookupClass) { HookInstallStateMachine() }.install {
-                        ModuleHelper.findAndHookMethod(lookupClass, "getSpanSize", Int::class.javaPrimitiveType!!, spanSizeHook) != null
-                    }
-                }
+                val tile = callback.getThisObject() as View
+                resizeIconFrame(tile)
+                // Unlike updateSize, onFinishInflate does not apply the resolved height.
+                changeExpand.invoke(tile)
             }
-        })
-        val columnsReplaceHook = object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) { callback.returnAndSkip(cols) }
         }
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.HeaderSpaceController", pluginLoader, "getSpanSize", columnsReplaceHook)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.security.SecurityFooterController", pluginLoader, "getSpanSize", columnsReplaceHook)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.qs.EditButtonController", pluginLoader, "getSpanSize", columnsReplaceHook)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.qs.QSListController\$EditModeDividerTextItem", pluginLoader, "getSpanSize", columnsReplaceHook)
-
-        // handle secondary panel show
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "updateVisibility", Int::class.javaPrimitiveType!!, object : MethodHook() {
+        val updateHeight = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
-                val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getContext")
-                val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", mContext) as Boolean
-                if (verticalMode) {
-                    val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                    leftMainPanel.visibility = callback.getArg(0) as Int
-                }
+                if (callback.getThrowable() != null) return
+                val tile = callback.getThisObject() as View
+                containerHeight.setInt(tile, (heightDp * tile.resources.displayMetrics.density).toInt())
             }
-        })
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "forceToShow", Any::class.java, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                leftMainPanel.alpha = 1.0f
-            }
-        })
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "onAnimUpdate", object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
-                val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getContext")
-                val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", mContext) as Boolean
-                if (verticalMode) {
-                    val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                    val rightMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "rightMainPanel") as ViewGroup
-                    val alpha = rightMainPanel.alpha
-                    leftMainPanel.alpha = alpha
-                }
-            }
-        })
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "onConfigurationChanged", Int::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val i = callback.getArg(0) as Int
-                if ((i and 128) != 0) {
-                    val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
-                    val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                    val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getContext")
-                    val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", mContext) as Boolean
-                    val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                    val rightMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "rightMainPanel") as ViewGroup
-                    if (verticalMode) {
-                        leftMainPanel.alpha = rightMainPanel.alpha
-                        leftMainPanel.visibility = rightMainPanel.visibility
-                    } else {
-                        leftMainPanel.alpha = 1.0f
-                        leftMainPanel.visibility = View.VISIBLE
-                    }
-                }
-            }
-        })
+        }
+        return listOf(
+            tileClass.getDeclaredMethod("updateSize") to updateSize,
+            tileClass.getDeclaredMethod("onFinishInflate") to finishInflate,
+            tileClass.getDeclaredMethod("updateContainerHeight") to updateHeight,
+        )
     }
 
-    @JvmStatic
-    fun CCHideEditButtonHook(pluginLoader: ClassLoader) {
-        val hideEdit = MainModule.mPrefs.getBoolean("system_cc_hide_edit")
-        val hideSecurity = MainModule.mPrefs.getBoolean("system_cc_hide_profile_monitoring")
-        if (!hideEdit && !hideSecurity) return
-
-        fun shouldHide(controller: Any?): Boolean {
-            val className = controller?.javaClass?.canonicalName ?: ""
-            return (hideEdit && className.contains("EditButtonController"))
-                || (hideSecurity && className.contains("SecurityFooterController"))
+    private fun prepareGridFullRowSpans(pluginLoader: ClassLoader, columns: Int): List<Pair<Method, MethodHook>> {
+        val columnsReplaceHook = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) { callback.returnAndSkip(columns) }
         }
+        val panelPackage = "miui.systemui.controlcenter.panel.main"
+        return listOf(
+            "$panelPackage.header.HeaderSpaceController",
+            "$panelPackage.security.SecurityFooterController",
+            "$panelPackage.qs.EditButtonController",
+            "$panelPackage.qs.QSListController\$EditModeDividerTextItem",
+        ).map { name ->
+            XposedHelpers.findClass(name, pluginLoader).getDeclaredMethod("getSpanSize") to columnsReplaceHook
+        }
+    }
 
-        // Filter the source list when the distributor is first created.
-        ModuleHelper.hookAllConstructors("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val thisObj = callback.getThisObject()
-                val rawChildControllers = try {
-                    XposedHelpers.getObjectField(thisObj, "childControllers")
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
+    private fun prepareGridPanelLayout(pluginLoader: ClassLoader): List<Pair<Method, MethodHook>> {
+        val controller = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader)
+        val leftPanel = controller.getDeclaredField("leftMainPanel")
+        val rightPanel = controller.getDeclaredField("rightMainPanel")
+        val parentPanel = controller.getDeclaredField("horizontalMainPanel")
+        val panelWidth = controller.getDeclaredField("panelWidth")
+        val separated = controller.getDeclaredField("useSeparatedPanels")
+        val setSeparated = controller.getDeclaredMethod("setUseSeparatedPanels", Boolean::class.javaObjectType)
+        val updatePanelSize = controller.getDeclaredMethod("updatePanelSize")
+
+        val positionPanels = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                val horizontal = callback.getArg(0) as Boolean? ?: return
+                val owner = callback.getThisObject()
+                if (horizontal == separated.get(owner)) return
+
+                val parent = parentPanel.get(owner) as LinearLayout
+                val left = leftPanel.get(owner) as View
+                if (horizontal) {
+                    // The ROM adds the left panel at index 0 and resolves the new configuration's margin.
+                    if (left.parent === parent) parent.removeView(left)
+                    parent.orientation = LinearLayout.HORIZONTAL
                     return
                 }
 
-                val childControllers: MutableList<Any?> = when (rawChildControllers) {
-                    is MutableList<*> -> rawChildControllers.toMutableList()
-                    is List<*> -> ArrayList(rawChildControllers as Collection<Any?>)
-                    else -> return
+                if (left.parent !== parent) {
+                    parent.addView(left)
+                } else if (parent.indexOfChild(left) != parent.childCount - 1) {
+                    parent.bringChildToFront(left)
                 }
-
-                val iter = childControllers.iterator()
-                while (iter.hasNext()) {
-                    if (shouldHide(iter.next())) iter.remove()
+                val params = left.layoutParams as ViewGroup.MarginLayoutParams
+                if (params.marginEnd != 0) {
+                    params.marginEnd = 0
+                    left.layoutParams = params
                 }
-
-                try {
-                    XposedHelpers.setObjectField(thisObj, "childControllers", childControllers)
-                } catch (ignored: Throwable) {
-                    FatalErrors.unwrapAndRethrowIfFatal(ignored)
-                    // final or unmodifiable field: rely on the distributePanels fallback
-                }
+                parent.orientation = LinearLayout.VERTICAL
+                separated.set(owner, false)
+                callback.returnAndSkip(null)
             }
-        })
+        }
+        val sizePanels = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                val owner = callback.getThisObject()
+                if (separated.get(owner) == true) return
+                val width = panelWidth.getInt(owner)
+                resizeStackedPanel(leftPanel.get(owner) as View, width)
+                resizeStackedPanel(rightPanel.get(owner) as View, width)
+                callback.returnAndSkip(null)
+            }
+        }
+        return listOf(setSeparated to positionPanels, updatePanelSize to sizePanels)
+    }
 
-        // Also remove from the panel content lists each time they are rebuilt.
-        ModuleHelper.hookAllMethods("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, "distributePanels", object : MethodHook() {
+    private fun resizeStackedPanel(panel: View, width: Int) {
+        val params = panel.layoutParams ?: return
+        if (params.width == width && params.height == ViewGroup.LayoutParams.WRAP_CONTENT) return
+        params.width = width
+        params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+        if (!panel.isLayoutRequested) panel.requestLayout()
+    }
+
+    private fun prepareGridPanelAnimation(pluginLoader: ClassLoader): List<Pair<Method, MethodHook>> {
+        val controller = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader)
+        val commonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
+        val utils = commonUtils.getDeclaredField("INSTANCE").get(null)
+        val isVertical = commonUtils.getDeclaredMethod("getInVerticalMode", Context::class.java)
+        val getContext = controller.getMethod("getContext")
+        val leftPanel = controller.getDeclaredField("leftMainPanel").apply { isAccessible = true }
+        val rightPanel = controller.getDeclaredField("rightMainPanel").apply { isAccessible = true }
+
+        fun inVerticalMode(owner: Any?) = isVertical.invoke(utils, getContext.invoke(owner)) as Boolean
+
+        val updateVisibility = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                val thisObj = callback.getThisObject()
-                val rightPanelContent = try {
-                    XposedHelpers.getObjectField(thisObj, "rightPanelContent") as? ArrayList<*>
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    null
-                } ?: return
-                val leftPanelContent = try {
-                    XposedHelpers.getObjectField(thisObj, "leftPanelContent") as? ArrayList<*>
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    null
-                } ?: return
-
-                val sizeRight = rightPanelContent.size
-                for (i in sizeRight - 1 downTo 0) {
-                    if (shouldHide(rightPanelContent[i])) rightPanelContent.removeAt(i)
+                if (callback.getThrowable() != null) return
+                val owner = callback.getThisObject()
+                if (!inVerticalMode(owner)) return
+                val left = leftPanel.get(owner) as View
+                val visibility = callback.getArg(0) as Int
+                if (left.visibility != visibility) left.visibility = visibility
+            }
+        }
+        val forceToShow = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val left = leftPanel.get(callback.getThisObject()) as View
+                if (left.alpha != 1f) left.alpha = 1f
+            }
+        }
+        val updateAlpha = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    val owner = chain.thisObject
+                    val left = leftPanel.get(owner) as View
+                    val alpha = (rightPanel.get(owner) as View).alpha
+                    if (left.alpha != alpha && inVerticalMode(owner)) left.alpha = alpha
                 }
-                val sizeLeft = leftPanelContent.size
-                for (i in sizeLeft - 1 downTo 0) {
-                    if (shouldHide(leftPanelContent[i])) leftPanelContent.removeAt(i)
+                return result
+            }
+        }
+        val configurationChanged = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val changes = callback.getArg(0) as Int
+                if (changes and ActivityInfo.CONFIG_ORIENTATION == 0) return
+                val owner = callback.getThisObject()
+                val left = leftPanel.get(owner) as View
+                val vertical = inVerticalMode(owner)
+                val right = if (vertical) rightPanel.get(owner) as View else null
+                val alpha = right?.alpha ?: 1f
+                val visibility = right?.visibility ?: View.VISIBLE
+                if (left.alpha != alpha) left.alpha = alpha
+                if (left.visibility != visibility) left.visibility = visibility
+            }
+        }
+        return listOf(
+            controller.getDeclaredMethod("updateVisibility", Int::class.javaPrimitiveType) to updateVisibility,
+            controller.getDeclaredMethod("forceToShow", Any::class.java) to forceToShow,
+            controller.getDeclaredMethod("onAnimUpdate") to updateAlpha,
+            controller.getDeclaredMethod("onConfigurationChanged", Int::class.javaPrimitiveType) to configurationChanged,
+        )
+    }
+
+    private class PanelGrid(val hooks: List<Pair<Method, MethodHook>>, val bindLeft: (Any) -> Unit) {
+        val batch = PreparedHookBatch()
+    }
+
+    private const val LEFT_GRID_BOUND = "a14LeftGridBound"
+    private const val LEFT_GRID_ADAPTER = "a14LeftGridAdapter"
+
+    internal fun hookPanelContent(
+        pluginLoader: ClassLoader,
+        columns: Int,
+        hideEdit: Boolean,
+        hideSecurity: Boolean,
+    ): Boolean = ModuleHelper.guarded(false) {
+        if (columns <= 4 && !hideEdit && !hideSecurity) return@guarded false
+        val panelPackage = "miui.systemui.controlcenter.panel.main"
+        val distributor = XposedHelpers.findClass("$panelPackage.MainPanelContentDistributor", pluginLoader)
+        val editButton = if (hideEdit) {
+            XposedHelpers.findClass("$panelPackage.qs.EditButtonController", pluginLoader)
+        } else null
+        val securityFooter = if (hideSecurity) {
+            XposedHelpers.findClass("$panelPackage.security.SecurityFooterController", pluginLoader)
+        } else null
+        val childControllers = if (hideEdit || hideSecurity) distributor.getDeclaredField("childControllers") else null
+        val grid = if (columns > 4) preparePanelGrid(distributor, pluginLoader, columns) else null
+        if (grid == null && childControllers == null) return@guarded false
+        val constructor = distributor.declaredConstructors.single()
+        val initialize = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val owner = callback.getThisObject() ?: return
+                if (childControllers != null) {
+                    val children = childControllers.get(owner) as ArrayList<*>
+                    for (index in children.lastIndex downTo 0) {
+                        val type = children[index]?.javaClass
+                        if ((hideEdit && type == editButton) || (hideSecurity && type == securityFooter)) {
+                            children.removeAt(index)
+                        }
+                    }
+                }
+                if (grid != null && grid.batch.isActive) {
+                    grid.bindLeft(owner)
+                    XposedHelpers.setAdditionalInstanceField(owner, LEFT_GRID_BOUND, true)
                 }
             }
-        })
+        }
+        check(ModuleHelper.findAndHookConstructor(
+            distributor.name, pluginLoader, *constructor.parameterTypes, initialize,
+        ) != null)
+        grid != null && grid.batch.install(grid.hooks).isActive
+    }
+
+    private fun preparePanelGrid(distributor: Class<*>, pluginLoader: ClassLoader, columns: Int): PanelGrid? =
+        ModuleHelper.guarded(null) {
+            // The native vertical layout detaches the left panel. Keep its layout and content changes in one batch.
+            val hooks = prepareGridPanelLayout(pluginLoader).toMutableList()
+            val bindLeft = prepareGridSpanLookup(distributor, pluginLoader, columns, hooks)
+            val panelPackage = "miui.systemui.controlcenter.panel.main"
+            val qsList = XposedHelpers.findClass("$panelPackage.qs.QSListController", pluginLoader)
+            val editButton = XposedHelpers.findClass("$panelPackage.qs.EditButtonController", pluginLoader)
+            val securityFooter = XposedHelpers.findClass("$panelPackage.security.SecurityFooterController", pluginLoader)
+            val footerSpace = XposedHelpers.findClass("$panelPackage.footer.FooterSpaceController", pluginLoader)
+            val inited = XposedHelpers.findField(distributor, "inited")
+            val leftContent = distributor.getDeclaredField("leftPanelContent")
+            val rightContent = distributor.getDeclaredField("rightPanelContent")
+            val distributePanels = distributor.getDeclaredMethod("distributePanels", Boolean::class.javaPrimitiveType)
+            hooks += distributePanels to object : MethodHook() {
+                @Suppress("UNCHECKED_CAST")
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null || callback.getArg(0) as Boolean) return
+                    val owner = callback.getThisObject()
+                    if (!inited.getBoolean(owner) || XposedHelpers.getAdditionalInstanceField(owner, LEFT_GRID_BOUND) != true) return
+                    val left = leftContent.get(owner) as ArrayList<Any>
+                    val right = rightContent.get(owner) as ArrayList<Any>
+                    // The ROM clears both lists first and emits the vertical items in priority order.
+                    var retained = 0
+                    for (index in right.indices) {
+                        val controller = right[index]
+                        when (controller.javaClass) {
+                            qsList, editButton, securityFooter -> left.add(controller)
+                            footerSpace -> Unit
+                            else -> {
+                                if (retained != index) right[retained] = controller
+                                retained++
+                            }
+                        }
+                    }
+                    for (index in right.lastIndex downTo retained) right.removeAt(index)
+                }
+            }
+            hooks += prepareGridPanelAnimation(pluginLoader)
+            hooks += prepareGridTileSizing(pluginLoader, 4f / columns)
+            hooks += prepareGridFullRowSpans(pluginLoader, columns)
+            PanelGrid(hooks, bindLeft)
+        }
+
+    private fun prepareGridSpanLookup(
+        distributor: Class<*>,
+        pluginLoader: ClassLoader,
+        columns: Int,
+        hooks: MutableList<Pair<Method, MethodHook>>,
+    ): (Any) -> Unit {
+        val adapter = distributor.getDeclaredField("leftAdapter")
+        val adapterClass = adapter.type
+        val layoutManager = adapterClass.getDeclaredField("layoutManager")
+        val lookupClass = XposedHelpers.findClass(adapterClass.name + "\$layoutManager\$1\$1", pluginLoader)
+        val lookupMethod = layoutManager.type.getMethod("getSpanSizeLookup")
+        val setSpanCount = layoutManager.type.getMethod("setSpanCount", Int::class.javaPrimitiveType)
+        val contentMap = adapterClass.getDeclaredField("contentMap")
+        val companionField = adapterClass.getDeclaredField("Companion")
+        val companion = companionField.get(null)
+        val getItem = companionField.type.getDeclaredMethod("getItem", Map::class.java, Int::class.javaPrimitiveType)
+            .apply { isAccessible = true }
+        val itemSpanSize = getItem.returnType.getMethod("getSpanSize")
+
+        val getSpanSize = lookupClass.getDeclaredMethod("getSpanSize", Int::class.javaPrimitiveType)
+        hooks += getSpanSize to object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val owner = (XposedHelpers.getAdditionalInstanceField(chain.thisObject, LEFT_GRID_ADAPTER) as? WeakReference<*>)?.get()
+                    ?: return chain.proceed()
+                val span = ModuleHelper.guarded<Int?>(null) {
+                    val position = chain.getArg(0) as Int
+                    if (position < 0) return@guarded columns
+                    // The ROM replaces contentMap on rebuild. Always use the current map.
+                    val item = getItem.invoke(companion, contentMap.get(owner), position) ?: return@guarded columns
+                    (itemSpanSize.invoke(item) as Int).coerceIn(1, columns)
+                }
+                return span ?: chain.proceed()
+            }
+        }
+
+        return { owner ->
+            val leftAdapter = adapter.get(owner)
+            val manager = layoutManager.get(leftAdapter)
+            val lookup = lookupMethod.invoke(manager)
+            check(lookupClass.isInstance(lookup))
+            setSpanCount.invoke(manager, columns)
+            // The adapter retains its lookup. Keep the association weak in the other direction.
+            XposedHelpers.setAdditionalInstanceField(lookup, LEFT_GRID_ADAPTER, WeakReference(leftAdapter))
+        }
     }
 
     @JvmStatic
@@ -1483,53 +1545,60 @@ object SystemUIControlCenterHooks {
     }
 
     @JvmStatic
-    fun VolumeTimerValuesRes(pluginLoader: ClassLoader) {
-        ModuleHelper.findAndHookMethod("com.android.systemui.miui.volume.MiuiVolumeTimerDrawableHelper", pluginLoader, "initTimerString", VolumeTimerLabelsHook())
-        ModuleHelper.findAndHookMethod("com.android.systemui.miui.volume.TimerItem", pluginLoader, "getTimePos", Int::class.javaPrimitiveType!!, VolumeTimerPositionHook())
-
-        ModuleHelper.guarded {
-            val helperClass = XposedHelpers.findClass(
-                "com.android.systemui.miui.volume.MiuiVolumeTimerDrawableHelper", pluginLoader,
-            )
-            ModuleHelper.findAndHookMethod(helperClass, "updateDrawables", VolumeTimerSegmentHook(helperClass))
-        }
+    fun VolumeTimerValuesRes(pluginLoader: ClassLoader) = ModuleHelper.guarded {
+        val volumePackage = "com.android.systemui.miui.volume"
+        val helperClass = XposedHelpers.findClass("$volumePackage.MiuiVolumeTimerDrawableHelper", pluginLoader)
+        val itemClass = XposedHelpers.findClass("$volumePackage.TimerItem", pluginLoader)
+        val seekBarClass = XposedHelpers.findClass("$volumePackage.MiuiVolumeTimerSeekBar", pluginLoader)
+        val dimens = XposedHelpers.findClass("$volumePackage.R\$dimen", pluginLoader)
+        val margin = dimens.getDeclaredField("miui_volume_timer_seekbar_margin_left").getInt(null)
+        check(PreparedHookBatch().install(listOf(
+            helperClass.getDeclaredMethod("initTimerString") to VolumeTimerLabelsHook(helperClass, seekBarClass),
+            itemClass.getDeclaredMethod("getTimePos", Int::class.javaPrimitiveType) to VolumeTimerPositionHook(itemClass, margin),
+            helperClass.getDeclaredMethod("updateDrawables") to VolumeTimerSegmentHook(helperClass),
+        )).isActive)
     }
 
-    internal class VolumeTimerPositionHook : MethodHook() {
+    internal class VolumeTimerPositionHook(itemClass: Class<*>, private val marginId: Int) : MethodHook() {
+        private val timeView = XposedHelpers.findField(itemClass, "mTimerTime")
+        private val context = XposedHelpers.findField(itemClass, "mContext")
+        private val widthId = XposedHelpers.findField(itemClass, "mTimerSeekbarWidth")
+        private val segment = XposedHelpers.findField(itemClass, "mDeterminedSegment")
+
         override fun before(callback: BeforeHookCallback) {
-            val timer = XposedHelpers.getObjectField(callback.getThisObject(), "mTimerTime")
-            val halfTimerWidth = (XposedHelpers.callMethod(timer, "getWidth") as Int) / 2.0f
-            val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
-            val mTimerSeekbarWidth = ModuleHelper.getObjectFieldSilently(callback.getThisObject(), "mTimerSeekbarWidth")
-            val seekbarWidthResId: Int
-            if (mTimerSeekbarWidth == ModuleHelper.NOT_EXIST_SYMBOL) {
-                seekbarWidthResId = mContext.resources.getIdentifier("miui_volume_timer_seekbar_width", "dimen", "miui.systemui.plugin")
-            } else {
-                seekbarWidthResId = mTimerSeekbarWidth as Int
-            }
-            if (seekbarWidthResId == 0) return
-            val mTimerSeekbarMarginLeft = mContext.resources.getIdentifier("miui_volume_timer_seekbar_margin_left", "dimen", "miui.systemui.plugin")
-            if (mTimerSeekbarMarginLeft == 0) return
-            val seekWidth = mContext.resources.getDimension(seekbarWidthResId)
-            val marginLeft = mContext.resources.getDimensionPixelSize(mTimerSeekbarMarginLeft)
-            val seg = XposedHelpers.getObjectField(callback.getThisObject(), "mDeterminedSegment") as Int
-            callback.returnAndSkip(seekWidth / 10 * seg + marginLeft - halfTimerWidth)
+            val item = callback.getThisObject()
+            val label = timeView.get(item) as View
+            val resources = (context.get(item) as Context).resources
+            val interval = resources.getDimension(widthId.getInt(item)) / VolumeTimerValues.lastSegment
+            val margin = resources.getDimensionPixelSize(marginId)
+            callback.returnAndSkip(interval * segment.getInt(item) + margin - label.width * .5f)
         }
     }
 
-    internal class VolumeTimerLabelsHook : MethodHook() {
+    internal class VolumeTimerLabelsHook(helperClass: Class<*>, private val seekBarClass: Class<*>) : MethodHook() {
+        private val context = XposedHelpers.findField(helperClass, "mContext")
+        private val timer = XposedHelpers.findField(helperClass, "mTimer")
+        private val segmentTitles = XposedHelpers.findField(helperClass, "mTimeSegmentTitle")
+        private val setTimeSegments = seekBarClass.getMethod("setTimeSegments", IntArray::class.java)
+        // Only durations are shared. Each helper owns its array and its original off label.
+        @Volatile private var localizedDurations: Pair<Locale, Array<String>>? = null
+
         override fun after(callback: AfterHookCallback) {
             if (callback.getThrowable() != null) return
             val helper = callback.getThisObject()
-            val nativeTitles = XposedHelpers.getObjectField(helper, "mTimeSegmentTitle") as? Array<*> ?: return
+            val seekBar = timer.get(helper)
+            if (!seekBarClass.isInstance(seekBar)) return
+            val nativeTitles = segmentTitles.get(helper) as? Array<*> ?: return
             val offLabel = nativeTitles.firstOrNull() as? String ?: return
             val titles = ModuleHelper.guarded<Array<String>?>(null) {
-                val context = XposedHelpers.getObjectField(helper, "mContext") as Context
-                val locale = context.resources.configuration.locales[0] ?: return@guarded null
-                VolumeTimerValues.labels(locale, offLabel)
+                val locale = (context.get(helper) as Context).resources.configuration.locales[0] ?: return@guarded null
+                val cached = localizedDurations
+                val durations = if (cached?.first == locale) cached.second else
+                    VolumeTimerValues.labels(locale, "").also { localizedDurations = locale to it }
+                durations.copyOf().apply { this[0] = offLabel }
             } ?: VolumeTimerValues.labels(null, offLabel)
-            // Always publish a whole array; the ROM clamps extended choices to its last title.
-            XposedHelpers.setObjectField(helper, "mTimeSegmentTitle", titles)
+            setTimeSegments.invoke(seekBar, VolumeTimerValues.segments())
+            segmentTitles.set(helper, titles)
         }
     }
 
@@ -1564,12 +1633,11 @@ object SystemUIControlCenterHooks {
         }
     }
 
-    @JvmStatic
-    fun CCTileCornerHook(pluginLoader: ClassLoader) {
+    private fun CCTileCornerHook(pluginLoader: ClassLoader, scale: Float) {
+        val radiusDp = 20f * scale
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.qs.tileview.QSTileItemIconView", pluginLoader, "getCornerRadius", object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
-                val radius = 20 * iconScaleRatio
-                callback.returnAndSkip(HookUtils.dp2px(radius))
+                callback.returnAndSkip(HookUtils.dp2px(radiusDp))
             }
         })
         val radiusHook = object : MethodHook() {
@@ -1577,8 +1645,7 @@ object SystemUIControlCenterHooks {
                 val drawable = callback.getResult()
                 val gradientDrawable = drawable as? GradientDrawable
                 if (gradientDrawable != null) {
-                    val radius = 20 * iconScaleRatio
-                    gradientDrawable.cornerRadius = HookUtils.dp2px(radius)
+                    gradientDrawable.cornerRadius = HookUtils.dp2px(radiusDp)
                 }
             }
         }
@@ -1771,22 +1838,11 @@ object SystemUIControlCenterHooks {
     private var mPctRef: WeakReference<TextView>? = null
     private var mPctOwnerRef: WeakReference<Any>? = null
     private var volumePctFeedback: VolumePercentageFeedback? = null
-    private var volumePctValue = -1
+    private var pctValue = -1
     private var volumePctStream = -1
 
     private val mPct: TextView?
         get() = mPctRef?.get()
-
-    internal fun configureLeftPanelColumns(distributor: Any, columns: Int, prepareLookup: (Class<*>) -> Unit) {
-        // A14 distributor owns explicit left/right adapters. Bind every left instance,
-        // independently from once-per-class method installation and factory call order.
-        val left = XposedHelpers.getObjectField(distributor, "leftAdapter")
-        XposedHelpers.setAdditionalInstanceField(left, "leftAdapter", true)
-        val manager = XposedHelpers.getObjectField(left, "layoutManager")
-        val lookup = XposedHelpers.callMethod(manager, "getSpanSizeLookup")
-        prepareLookup(lookup.javaClass)
-        XposedHelpers.callMethod(manager, "setSpanCount", columns)
-    }
 
     private const val PCT_SOURCE_BRIGHTNESS = 2
     private const val PCT_SOURCE_VOLUME = 3
@@ -1810,8 +1866,7 @@ object SystemUIControlCenterHooks {
 
     private fun applyPctTopMargin(pct: TextView, container: View, source: Int) {
         val lp = (pct.layoutParams as? FrameLayout.LayoutParams) ?: return
-        lp.gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
-        lp.topMargin = if (source == PCT_SOURCE_VOLUME) {
+        val top = if (source == PCT_SOURCE_VOLUME) {
             resolveVolumePctTopMarginPx(statusBarBottomPx(container))
         } else {
             Math.round(
@@ -1819,7 +1874,10 @@ object SystemUIControlCenterHooks {
                     pct.resources.displayMetrics.density
             )
         }
-        pct.layoutParams = lp
+        if (lp.topMargin != top) {
+            lp.topMargin = top
+            pct.layoutParams = lp
+        }
     }
 
     private fun ownedPct(owner: Any?, source: Int): TextView? {
@@ -1900,11 +1958,12 @@ object SystemUIControlCenterHooks {
             container.addView(pct)
             mPctRef = WeakReference(pct)
             mPctOwnerRef = WeakReference(owner)
+            pctValue = -1
         }
         applyPctTopMargin(pct, container, source)
         pct.setTag(source)
         pct.visibility = View.GONE
-        if (source == PCT_SOURCE_VOLUME) { volumePctValue = -1; volumePctStream = -1 }
+        if (source == PCT_SOURCE_VOLUME) { pctValue = -1; volumePctStream = -1 }
         return pct
     }
 
@@ -1927,64 +1986,55 @@ object SystemUIControlCenterHooks {
         removePct(ownedPct(owner, source))
     }
 
-    private fun startShowPct(lpparam: PackageReadyParam, mContext: Context, owner: Any) {
-        val controlCenter = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.controlcenter.phone.ControlPanelWindowManager")
-        val controlCenterWindowView = XposedHelpers.getObjectField(controlCenter, "windowView")
-        val windowView = XposedHelpers.callMethod(controlCenterWindowView, "getView") as ViewGroup
-        initPct(windowView, PCT_SOURCE_BRIGHTNESS, mContext, owner).visibility = View.VISIBLE
-    }
-
     @JvmStatic
     fun BrightnessPctHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "onStart", object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val owner = callback.getThisObject() ?: return
-                val mContext = XposedHelpers.getObjectField(owner, "mContext") as Context
-                startShowPct(lpparam, mContext, owner)
-            }
-        })
+        val loader = lpparam.classLoader
+        val controller = XposedHelpers.findClass("com.android.systemui.controlcenter.policy.MiuiBrightnessController", loader)
+        val slider = XposedHelpers.findClass("com.android.systemui.plugins.miui.controlcenter.ToggleSliderBase", loader)
+        val brightnessUtils = XposedHelpers.findClass("com.android.systemui.controlcenter.policy.BrightnessUtils", loader)
+        val gammaMax = XposedHelpers.getStaticIntField(brightnessUtils, "GAMMA_SPACE_MAX")
+        check(gammaMax > 0)
+        val context = XposedHelpers.findField(controller, "mContext")
+        val managerName = "com.android.systemui.controlcenter.phone.ControlPanelWindowManager"
+        val windowView = XposedHelpers.findField(XposedHelpers.findClass(managerName, loader), "windowView")
+        val intType = Int::class.javaPrimitiveType
+        val boolType = Boolean::class.javaPrimitiveType
+        val onStart = controller.getDeclaredMethod("onStart", intType)
+        val onStop = controller.getDeclaredMethod("onStop", intType)
+        val onChanged = controller.getDeclaredMethod("onChanged", slider, boolType, boolType, intType, boolType)
 
-        val sliderHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
-        ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "setToggleSliderBase", object : MethodHook() {
-            override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
-                if (callback.getThrowable() != null) return
-                val slider = callback.getArg(0) ?: return
-                if (slider.javaClass.simpleName == "ToggleSliderViewHolder") return
-                val listener = XposedHelpers.getObjectField(slider, "mOnSeekBarChangeListener") ?: return
-                // Each listener belongs to its current controller; the class-wide hook
-                // never captures the first slider/controller or ignores replacements.
-                XposedHelpers.setAdditionalInstanceField(listener, "a14.brightnessOwner", WeakReference(callback.getThisObject()))
-                sliderHooks.getOrPut(listener.javaClass) { HookInstallStateMachine() }.install {
-                    ModuleHelper.findAndHookMethod(listener.javaClass, "onStartTrackingTouch", SeekBar::class.java, object : MethodHook() {
-                        override fun before(callback: BeforeHookCallback): Unit = ModuleHelper.guarded {
-                            val reference = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "a14.brightnessOwner") as? WeakReference<*>
-                            val owner = reference?.get() ?: return
-                            val context = XposedHelpers.getObjectField(owner, "mContext") as Context
-                            startShowPct(lpparam, context, owner)
-                        }
-                    }) != null
-                }
-            }
-        })
+        fun updateBrightness(pct: TextView, level: Int) {
+            val percent = level.coerceIn(0, gammaMax) * 100 / gammaMax
+            if (pctValue == percent) return
+            pctValue = percent
+            pct.text = "$percent%"
+        }
 
-        ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "onStop", object : MethodHook() {
+        val start = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                removePct(callback.getThisObject(), PCT_SOURCE_BRIGHTNESS)
+                if (callback.getThrowable() != null) return
+                val owner = callback.getThisObject() ?: return
+                val manager = ModuleHelper.getDepInstance(loader, managerName) ?: return
+                val window = windowView.get(manager) ?: return
+                val container = XposedHelpers.callMethod(window, "getView") as? ViewGroup ?: return
+                val pct = initPct(container, PCT_SOURCE_BRIGHTNESS, context.get(owner) as Context, owner)
+                updateBrightness(pct, callback.getArg(0) as Int)
+                pct.visibility = View.VISIBLE
             }
-        })
-
-        val BrightnessUtils = XposedHelpers.findClassIfExists("com.android.systemui.controlcenter.policy.BrightnessUtils", lpparam.classLoader)
-        ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "onChanged", object : MethodHook() {
+        }
+        val changed = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() != null) return
                 val pct = ownedPct(callback.getThisObject(), PCT_SOURCE_BRIGHTNESS) ?: return
-                val currentLevel = callback.getArg(3) as Int
-                if (BrightnessUtils != null) {
-                    val maxLevel = XposedHelpers.getStaticObjectField(BrightnessUtils, "GAMMA_SPACE_MAX") as Int
-                    pct.text = ((currentLevel * 100) / maxLevel).toString() + "%"
-                }
+                updateBrightness(pct, callback.getArg(3) as Int)
             }
-        })
+        }
+        val stop = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                removePct(callback.getThisObject(), PCT_SOURCE_BRIGHTNESS)
+            }
+        }
+        check(PreparedHookBatch().install(listOf(onStart to start, onChanged to changed, onStop to stop)).isActive)
     }
 
     @JvmStatic
@@ -2004,11 +2054,11 @@ object SystemUIControlCenterHooks {
                 val mDialogView = dialogView.get(owner) as View
                 val windowView = mDialogView.parent as? ViewGroup ?: return
                 progressHook.clearTracking()
-                initPct(windowView, PCT_SOURCE_VOLUME, mDialogView.context, owner)
+                val pct = initPct(windowView, PCT_SOURCE_VOLUME, mDialogView.context, owner)
                 // Native state can be unchanged on show, so no SeekBar callback is guaranteed.
                 for (column in (columns.get(owner) as? List<*>).orEmpty()) {
                     if (column != null) (slider.get(column) as? SeekBar)?.let {
-                        progressHook.update(owner, column, it)
+                        progressHook.update(pct, owner, column, it)
                     }
                 }
             }
@@ -2016,7 +2066,8 @@ object SystemUIControlCenterHooks {
 
         ModuleHelper.findAndHookMethod(MiuiVolumeDialogImpl, "dismissH", Int::class.javaPrimitiveType!!, VolumePercentageDismissHook())
 
-        ModuleHelper.hookAllMethods(listenerClass, "onProgressChanged", progressHook)
+        ModuleHelper.findAndHookMethod(listenerClass, "onProgressChanged", SeekBar::class.java,
+            Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType, progressHook)
         for (event in listOf("onStartTrackingTouch", "onStopTrackingTouch")) {
             ModuleHelper.findAndHookMethod(listenerClass, event, SeekBar::class.java, object : MethodHook() {
                 override fun after(callback: AfterHookCallback) {
@@ -2031,9 +2082,10 @@ object SystemUIControlCenterHooks {
                 override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                     if (callback.getThrowable() != null) return@guarded
                     val owner = callback.getThisObject() ?: return@guarded
+                    val pct = ownedPct(owner, PCT_SOURCE_VOLUME) ?: return@guarded
                     val column = callback.getArg(0) ?: return@guarded
                     val seekBar = slider.get(column) as? SeekBar ?: return@guarded
-                    progressHook.update(owner, column, seekBar)
+                    progressHook.update(pct, owner, column, seekBar)
                 }
             })
         ModuleHelper.findAndHookMethod(MiuiVolumeDialogImpl, "destroy", object : MethodHook() {
@@ -2074,20 +2126,19 @@ object SystemUIControlCenterHooks {
             if (callback.getThrowable() != null) return
             val listener = callback.getThisObject() ?: return
             val owner = ownerField.get(listener) ?: return
+            val pct = ownedPct(owner, PCT_SOURCE_VOLUME) ?: return
             val column = columnField.get(listener) ?: return
-            update(owner, column, callback.getArg(0) as SeekBar,
-                (callback.getArg(1) as Int).takeIf { callback.getArg(2) == true })
+            val userProgress = if (callback.getArg(2) == true) callback.getArg(1) as Int else null
+            update(pct, owner, column, callback.getArg(0) as SeekBar, userProgress)
         }
 
-        fun update(owner: Any, column: Any, seekBar: SeekBar, userProgress: Int? = null) {
-            val pct = ownedPct(owner, PCT_SOURCE_VOLUME) ?: return
+        fun update(pct: TextView, owner: Any, column: Any, seekBar: SeekBar, userProgress: Int? = null) {
             val stream = streamField.getInt(column)
             if (stream == 10) return
             val dragged = tracking.get()
             if (userProgress == null && (if (dragged != null) dragged !== column else stream != activeField.getInt(owner))) return
             val ss = stateField.get(column) ?: return
-            val anim = animField.get(column) as? ObjectAnimator
-            val currentLevel = userProgress ?: if (anim?.isRunning == true) targetField.getInt(column)
+            val currentLevel = userProgress ?: if ((animField.get(column) as? ObjectAnimator)?.isRunning == true) targetField.getInt(column)
                 else levelField.getInt(ss) * 1000
             val levelMin = minimumField.getInt(ss)
             var adjustedLevel = currentLevel
@@ -2099,7 +2150,7 @@ object SystemUIControlCenterHooks {
             if (maxLevel <= 0) {
                 pct.visibility = View.GONE
                 volumePctFeedback?.release()
-                volumePctValue = -1
+                pctValue = -1
                 return
             }
             adjustedLevel = adjustedLevel.coerceIn(0, max)
@@ -2108,7 +2159,7 @@ object SystemUIControlCenterHooks {
                 adjustedLevel = if (adjustedLevel == max) maxLevel else ((adjustedLevel.toFloat() / max) * i3).toInt() + 1
             }
             val percent = (adjustedLevel * 100) / maxLevel
-            if (volumePctValue == percent && volumePctStream == stream) {
+            if (pctValue == percent && volumePctStream == stream) {
                 // No new text, layout or animation for repeated animation frames. A preempted
                 // or expired external surface still exposes the already prepared native hint.
                 if (pct.visibility == View.GONE && volumePctFeedback?.isPresented() != true) {
@@ -2117,7 +2168,7 @@ object SystemUIControlCenterHooks {
                 }
                 return
             }
-            volumePctValue = percent
+            pctValue = percent
             volumePctStream = stream
             val text = "$percent%"
             if (pct.text.toString() != text) pct.text = text
@@ -2220,58 +2271,74 @@ object SystemUIControlCenterHooks {
 
     @JvmStatic
     fun SwitchCCAndNotificationHook(lpparam: PackageReadyParam) {
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView", lpparam.classLoader, "handleEvent", MotionEvent::class.java, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val mPanelController = XposedHelpers.getObjectField(callback.getThisObject(), "mPanelController")
-                val useCC = XposedHelpers.callMethod(mPanelController, "isExpandable") as Boolean
-                if (useCC) {
-                    val bar = callback.getThisObject() as FrameLayout
-                    val mControlPanelWindowManager = XposedHelpers.getObjectField(callback.getThisObject(), "mControlPanelWindowManager")
-                    if (callback.getArgs().isEmpty()) {
-                        callback.returnAndSkip(false)
-                        return
-                    }
-                    val dispatchToControlPanel = XposedHelpers.callMethod(mControlPanelWindowManager, "dispatchToControlPanel", callback.getArg(0), bar.width.toFloat()) as Boolean
-                    XposedHelpers.callMethod(mControlPanelWindowManager, "setTransToControlPanel", dispatchToControlPanel)
-                    callback.returnAndSkip(dispatchToControlPanel)
-                    return
+        val loader = lpparam.classLoader
+        val barClass = XposedHelpers.findClass("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView", loader)
+        val managerClass = XposedHelpers.findClass("com.android.systemui.controlcenter.phone.ControlPanelWindowManager", loader)
+        val handleEvent = barClass.getDeclaredMethod("handleEvent", MotionEvent::class.java)
+        val dispatchEvent = managerClass.getDeclaredMethod("dispatchToControlPanel", MotionEvent::class.java, Float::class.javaPrimitiveType)
+        val barUsesControlCenter = barClass.getDeclaredField("mUseControlCenter").apply { isAccessible = true }
+        val motionToControlCenter = barClass.getDeclaredField("mMotionToControlCenter").apply { isAccessible = true }
+        val added = managerClass.getDeclaredField("added").apply { isAccessible = true }
+        val controller = managerClass.getDeclaredField("controlCenterController").apply { isAccessible = true }
+        val useControlCenter = controller.type.getDeclaredField("useControlCenter").apply { isAccessible = true }
+        val downX = managerClass.getDeclaredField("downX").apply { isAccessible = true }
+        val window = managerClass.getDeclaredField("windowView").apply { isAccessible = true }
+        val handleMotionEvent = window.type.getMethod("handleMotionEvent", MotionEvent::class.java, Boolean::class.javaPrimitiveType)
+
+        class DownDispatch(val event: MotionEvent) { var accepted = false }
+        val activeDown = ThreadLocal<DownDispatch>()
+
+        val statusBar = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val event = chain.getArg(0) as? MotionEvent ?: return chain.proceed()
+                if (event.actionMasked != MotionEvent.ACTION_DOWN) return chain.proceed()
+                val bar = chain.thisObject as View
+                val fromLeft = ModuleHelper.guarded<Boolean?>(null) {
+                    if (!barUsesControlCenter.getBoolean(bar)) return@guarded null
+                    // The ROM only sets this latch on a right DOWN. Seed it for a left DOWN
+                    // so the original still processes focused notifications and owns UP/CANCEL.
+                    (event.rawX < bar.width / 2f).also { if (it) motionToControlCenter.setBoolean(bar, true) }
                 }
-                callback.returnAndSkip(false)
-            }
-        })
-        ModuleHelper.findAndHookMethod("com.android.systemui.controlcenter.phone.ControlPanelWindowManager", lpparam.classLoader, "dispatchToControlPanel", MotionEvent::class.java, Float::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val added = XposedHelpers.getBooleanField(callback.getThisObject(), "added")
-                if (added) {
-                    val controlCenterController = XposedHelpers.getObjectField(callback.getThisObject(), "controlCenterController")
-                    val useCC = XposedHelpers.getBooleanField(controlCenterController, "useControlCenter")
-                    if (useCC) {
-                        if (callback.getArgs().size < 2) {
-                            callback.returnAndSkip(false)
-                            return
-                        }
-                        val motionEvent = callback.getArg(0) as? MotionEvent ?: return
-                        if (motionEvent.actionMasked == MotionEvent.ACTION_DOWN) {
-                            XposedHelpers.setFloatField(callback.getThisObject(), "downX", motionEvent.rawX)
-                        }
-                        val controlCenterWindowView = XposedHelpers.getObjectField(callback.getThisObject(), "windowView")
-                        if (controlCenterWindowView == null) {
-                            callback.returnAndSkip(false)
-                        } else {
-                            val mDownX = XposedHelpers.getFloatField(callback.getThisObject(), "downX")
-                            val width = callback.getArg(1) as? Float ?: return
-                            if (mDownX < width / 2.0f) {
-                                callback.returnAndSkip(XposedHelpers.callMethod(controlCenterWindowView, "handleMotionEvent", motionEvent, true))
-                            } else {
-                                callback.returnAndSkip(false)
-                            }
-                        }
-                        return
-                    }
+                if (fromLeft == null) return chain.proceed()
+
+                // The native status bar returns its latch, ignoring the manager's dispatch result.
+                val down = if (fromLeft) DownDispatch(event) else null
+                val previous = activeDown.get()
+                activeDown.set(down)
+                var accepted = false
+                try {
+                    accepted = chain.proceed() == true && down?.accepted == true
+                    return accepted
+                } finally {
+                    if (previous == null) activeDown.remove() else activeDown.set(previous)
+                    if (!accepted) ModuleHelper.guarded { motionToControlCenter.setBoolean(bar, false) }
                 }
-                callback.returnAndSkip(false)
             }
-        })
+        }
+        val windowManager = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? = ModuleHelper.guarded(false) {
+                val manager = chain.thisObject
+                if (!added.getBoolean(manager) || !useControlCenter.getBoolean(controller.get(manager))) return@guarded false
+                val event = chain.getArg(0) as MotionEvent
+                val isDown = event.actionMasked == MotionEvent.ACTION_DOWN
+                val startX = if (isDown) {
+                    event.rawX.also { downX.setFloat(manager, it) }
+                } else {
+                    downX.getFloat(manager)
+                }
+                val width = chain.getArg(1) as Float
+                val fromLeft = startX < width / 2f
+                if (!fromLeft) return@guarded false
+                val view = window.get(manager) ?: return@guarded false
+                val accepted = handleMotionEvent.invoke(view, event, true) as Boolean
+                if (accepted && isDown) {
+                    val down = activeDown.get()
+                    if (down?.event === event) down.accepted = true
+                }
+                accepted
+            }
+        }
+        check(PreparedHookBatch().install(listOf(handleEvent to statusBar, dispatchEvent to windowManager)).isActive)
     }
 
 }

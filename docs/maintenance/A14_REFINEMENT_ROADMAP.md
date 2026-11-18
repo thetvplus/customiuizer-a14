@@ -130,9 +130,39 @@ r14.27.9 的 309 试用包经受控重建确认 SystemUI 加载 API 102。离线
 - 通知自动展开通过同一 `PrefMap` 版本读取模式和名单。无效模式直接交还原生，使用 `StatusBarNotification.getPackageName()` 的虚调用保留 ROM 包名覆写。fuxi CN / TW、duchamp CN、munch ID 和从连接设备只读取得的 xaga 样本均确认 `RowAppearanceCoordinator.onAfterRenderEntry` 调用该宿主的 `setFeedbackIcon`。fuxi CN 的 Smali 另确认原生先执行自身展开决定，覆写 getter 读取 `mPkgName`。这是静态调用证据，当前候选的 Hook 成功与端到端展开仍待实机。
 - 偏好监听已注册时，启动重试直接读取发布快照。Wi-Fi 自动化读取 VPN 目标时只取类型和 ID，完整应用名单仍由 VPN 自动切换消费。
 
+### SystemUI 原生入口维护
+
+- DexSQL 对 duchamp CN、fuxi CN / TW 和 munch ID 的 SystemUI 核对了 `MiuiClock` 三参数构造器、时钟和通知图标的 `onDarkChanged` 签名，以及第二行网速的 `setNetworkSpeedIcon(NetworkSpeedState)`。四份样本的双参数时钟构造器均委托到三参数构造器。网速调用来自原生控制器的初始化、文本更新和可见性更新。
+- 四份样本的 `MiuiBatteryMeterView.updateAll()` 都读取自身声明的数字、百分比和标记 `TextView`。模块在安装时解析同一组字段。默认样式且没有基线时直接返回，自定义及恢复路径每个字段只读一次。基线随原生子视图更换而刷新，恢复默认后释放。字段或安装点缺失时由 Feature 安装边界隔离。Android 14 Host 覆盖恢复、重复更新、替换子视图和 Battery4 的边距归属。
+- StrongToast 在存在高度匹配基线时才查找并恢复原生子视图。岛体几何与窗口生命周期由动态岛路径负责，StrongToast 已移除无生产调用的旧几何实现及对应专项。
+- 网速样式跟随四份 ROM 经 `StatusIconDisplayable` 分发的 `NetworkSpeedView.onDensityOrFontScaleChanged()`。原生更新数字、单位和暗色状态后，模块恢复这两个子视图的字形并使完整样式失效。选择时钟样式时在应用样式的位置恢复字形。移除进程级 `TextView.setTextAppearance` Hook 和只剩测试调用的样式分支。
+- 温度与电流监控按原生 `NetworkSpeedController` 构造签名读取 Context 和后台 Looper。单行自定义图标只在准确的 `IconManager.addHolder(int, String, boolean, StatusBarIconHolder)` 安装成功后注册。普通图标只访问 holder 的 `mType`，原生链继续执行一次。网速格式、时钟控制器、移动信号状态与暗色回调、挖孔布局也改用四份样本共同的确切签名。
+- 四份 ROM 的网速后台 Handler 在原生 `200001` 节拍结束后安排 4 秒后继。间隔 Hook 仅处理控制器当前后台 Handler 的成功回调，恢复 4 秒时复用原生消息。详细网速在原生隐藏状态跳过网络查询、接口采样和自定义格式化，并保留 `updateVisibility` 传入的 `EMPTY` 清空数组。上下行样本按控制器发布为一对，原生重置或无可用默认网络时重新取基线。
+- 四份 ROM 的 `MiuiPhoneStatusBarView.handleEvent(MotionEvent)` 都以 `mMotionToControlCenter` 保存手势归属，并在抬手或取消时清除。左右对调保留状态栏每个事件的原生处理，包括焦点通知。与 `ControlPanelWindowManager.dispatchToControlPanel(MotionEvent, float)` 成对安装，安装时解析字段及插件窗口接口，触摸时按原生 `downX` 分流。左侧按下由控制中心实际接收后才保留归属。窗口未加入、窗口缺失或插件拒收时，清除标记并将本次按下交回通知栏。Host 回归覆盖上述回退、后续手势恢复、跨越中线、取消及关闭控制中心。
+- iOS 音量面板只在进入最小或最大档位的回弹路径安排 600 ms 释放任务。离开边界即取消该任务，普通档位保留原生音量状态与按键回调的 32 ms 合并窗口。
+- 四份 ROM 的两版控制中心插件均从 `QSTileItemView.updateSize()` 读取 `R.id.icon_frame` 和原生视图缓存。自定义列数在安装时解析同一资源 ID、缓存入口和高度字段，按磁贴自身密度换算。原生更新仍负责标签高度与折叠布局，只有 `onFinishInflate()` 后补做一次折叠布局。圆角比例随插件安装捕获。面板动画在安装时解析成员，透明度未变时跳过模块自己的竖排判断与写入，仍使用原生方向和强制竖排规则。
+- 两版插件的 `MainPanelContentDistributor` 在构造时按原生优先级排序，`distributePanels(boolean)` 保留同一顺序并先检查当前面板模式下的可用性。自定义列数的面板布局、跨度、内容分发、动画和磁贴尺寸使用同一安装批次。每个分发器的左面板跨度绑定成功后才允许搬移内容。批次回滚或跨度绑定失败时，竖排沿用原生右面板。隐藏编辑和安全提示共用构造回调，从原生控制器列表独立移除。竖排自定义布局按原序搬移磁贴、编辑入口和安全提示，并去掉右栏尾部占位。横排沿用原生分栏。
+- 两版插件的 `MainPanelAdapter` 均使用同一个跨栏方法，并在内容重建时替换 `contentMap`。模块安装时解析该方法、原生条目查找和跨栏接口。每个左栏查找器弱引用自己的适配器，布局时读取该适配器当前内容表，按配置列数限制跨度。右栏沿用原生查询。跨栏 Hook 安装失败时保留原生列数和分流，隐藏选项仍会生效。
+- 两版插件均由 `MainPanelController.updateResources()` 依次调用分栏与尺寸入口。横排交给原生 `setUseSeparatedPanels(Boolean)` 挂载左栏并读取中缝尺寸。竖排用容器原生的子视图排序保持左栏挂载。两处 Hook 成对安装，竖排宽高变化时才更新参数，并复用已有的布局请求。横排尺寸仍由原生 `updatePanelSize()` 更新。
+- 两版插件的运营商回调先写文本再更新隐私提示和显隐。显示文本与回调输入不同时才改写参数，保留一次原生写入。步数视图复用运营商栏在竖排的锚点、实际底边距和隐私显隐结果，只修改自身布局，保留已有的步数观察者生命周期。展开回调从页眉控制器的弱引用取得步数视图，位移相同则跳过写入。
+- 未挂载的步数视图只显示已有缓存，挂载后才开始观察屏幕与分钟广播。首个活跃视图启动一次三秒等待，后续挂载沿用同一时点。分钟广播或亮屏先触发刷新时取消等待。最后一个视图拆除时释放观察者和任务，旧 Context 的分钟广播不再触发查询，跨 Context 的同步查询仍保持串行。
+- 四份 ROM 的控制中心亮度提示使用 `MiuiBrightnessController.onStart(int)`、`onChanged(ToggleSliderBase, boolean, boolean, int, boolean)` 和 `onStop(int)`。起始数值由原生回调直接提供，安装时读取 Gamma 上限，整数百分比相同时跳过格式化与写入。移除在原生绑定对象上找不到监听器字段的兼容分支。音量进度按两版插件的确切签名安装，非当前窗口及程序更新省去无用的拖动参数读取，实时 Insets 与已有布局事件继续控制位置。
+- 两版音量插件的横竖屏计时器都在 `MiuiVolumeTimerDrawableHelper.initTimerString()` 后、首次绘制前取得对应的时长和标签。模块在此复用原生 `setTimeSegments(int[])` 发布 11 档，每个实例保留独立数组和原生关闭标签。移除全局资源替换，同语言复用时长文本。拖动位置在安装时解析字段和边距资源 ID，按当前配置读取原生宽度和边距。
+- 四份 ROM 的 `StatusBarMobileView.onDarkChanged()` 均在写完原生图标和着色状态后进入 `applyDarknessInternal()`，双卡图标在该公共入口完成整组更新。双排图标与双排数字在 `setMobileIcons()` 就地更新状态，原生继续消费同一参数列表，图标资源名称解析延至首次双卡更新。原生判断主卡状态相等而跳过绘制时，`applyMobileState()` 返回后按 View 已呈现的副卡档位增量更新下排，原生已绘制或档位相同时跳过。档位只由当前 View 的 tag 持有。非双卡列表以及原生 `setSubs()` 移除旧图标后的非双卡状态清除配对，新建单卡图标沿用原生。副卡独立变更、单双卡切换、圆点样式组合及亮暗切换待插卡实机复验。
+- 重新构建 `1c33ef4b` 的 Develop APK，内嵌版本与 Git 一致。与上一份本地 Develop APK 对照，资源表、打包资源及 Manifest 内容相同。APK 的 994 个设置索引 XML 元素与生成结果一致，96 个双卡图标名称齐全。两版插件中的页眉和磁贴资源字段均可在 AAPT2 资源表定位对应名称，计时器尺寸 ID 随版本变化。四份 ROM 的 SystemUI 网速和信号名均可定位，MiuiHome 与 POCO 的 `icon_title` 位于各自的资源包。核心合同将磁贴归入 `plugin`，补齐两个尺寸回调，联合复核入口见 [DexSQL 资源表复核](../rom-intelligence/DEXSQL.md#资源表复核)。
+- 当前候选的 SystemUI 实装、主题与字体重载、第二行网速、控制中心左右分流、自定义磁贴尺寸、面板分栏与动画、步数刷新、亮度与音量百分比提示、音量计时器、音量按键回弹和宿主性能仍待对应 ROM 实机验收。静态签名通过只覆盖四份离线样本。
+
+### Launcher 原生入口维护
+
+- MiuiHome 8604 与 POCO 7603 的 `ItemIcon.mTitleView` 均指向实际标题 View。`ShortcutIcon.fromXml` 的包装重载委托到主实现，桌面标题在原生创建、外观变化后按当前资源换算字号，尺寸相同直接跳过写入。壁纸路径按各宿主资源包定位 `icon_title`。
+- 文件夹宽度与方形占位图使用安装时解析的原生字段。重复宽度赋值和边界相同的布局被跳过，待处理的原生布局请求仍会执行。`Folder.onLayout(boolean, int, int, int, int)` 及助手手势 `handleTouchEvent(MotionEvent, View)` 按两种 Launcher 的共同签名安装。
+- 桌面双击状态挂在 Workspace 的 View tag，三参数原生构造成功后初始化。触摸分发直接读取该 tag，动作执行时取当前 View 的 Context。横竖屏桌面、文件夹过渡、标题重绑及 POCO 真机效果待验。
+
 ### 实机成本与 Native 取舍（2026-11-08）
 
 基于 `40f42fe346e6f247fecd65f5f13cea497fa531c3` 的准确 Develop 产物。单一 HyperOS 1 / Android 14 设备，实际 120 Hz、热状态 0、固定方向；自动化、截图和内存查询不进入 trace 操作窗口。以下是同 APK 的目标功能组合开 / 关，关闭侧仍保留其它原有配置，不是代码优化前后或纯原生系统对照。每场景三组交替，取各侧中位数；最大组内极差只作描述性噪声参考，不是显著性检验。
+
+该 A14 样本的 MISettings 在 SDK 33 起走 Settings.Secure 的 `user_refresh_rate`，对应分支还消费 `miui_refresh_rate`；实测仅写同名 System 键未落实 60 Hz。通用对照按[轻量测量](../OPTIMIZATION_GATES.md#轻量测量)核对实际刷新率。
 
 | 场景 / 宿主 | 关闭 → 开启 | 结论与边界 |
 | --- | --- | --- |
@@ -176,9 +206,13 @@ Develop / Release 原有优化、资源压缩与签名隔离保持。R8 分析�
 
 ## 仓库安全待办
 
-- 独立依赖图的仓库白名单已补齐 `dependency-submission`。[main 实际运行](https://github.com/thetvplus/customiuizer-a14/actions/runs/42529732427) 的生成、隔离提交均成功，快照绑定 `8eb454c2`，包含 351 项解析依赖；没有构建 APK 或触发签名。依赖变化后按需刷新，不加入重复 CI。
-- 新依赖图显露 6 条传递依赖告警；定向解析确认旧版 Guava、Bouncy Castle、Commons Lang 和 HttpClient 来自 AGP 独立的 `androidLintTool`，未继承根 buildscript 约束。候选已补齐现有安全版本约束，实际 Lint 通过，APK / JVM 测试运行时依赖清单与修复前逐字一致。main 告警保留开放，合入后须刷新依赖图核实；Dependabot 对已约束的根依赖返回无需更新，不能替代 Lint 配置验证。
-- Gradle 9.8.2 内置 Guava 33.4.6-jre 的 CVE-2026-102554 宿主风险仍待上游发行版处理，区别于项目可约束的依赖。生产 APK 不含完整 Guava；不改 Gradle 发行包内部文件或固定摘要。
+- 独立依赖图在 [master 运行](https://github.com/thetvplus/customiuizer-a14/actions/runs/43043479358)完成生成与隔离提交。迁移前 [main 运行](https://github.com/thetvplus/customiuizer-a14/actions/runs/42529732427)保留首次验收依据。依赖输入变更后按 [CI 入口](../TESTING.md#ci)刷新。
+- 旧版 Guava、Bouncy Castle、Commons Lang 和 HttpClient 的告警曾来自 AGP 独立的 `androidLintTool`。补齐版本约束后，定向 Lint 通过，APK / JVM 测试运行时依赖清单与修复前一致。2026-11-18 仓库 API 返回 0 条开放的 Dependabot 告警，证据范围限于已提交的依赖图和 GitHub 当前告警状态。
+- Gradle Wrapper 升至带三项安全修复的 9.9.1，发行包和 Wrapper JAR 以 Gradle 官方 SHA-256 核对。该发行包仍含 Guava 33.4.6-jre，CVE-2026-102554 的 Gradle 内置依赖风险仍待上游更新。可约束的 AGP、Lint 和 JVM 测试依赖使用 Guava 33.8.0-jre 和 Bouncy Castle 1.87，Commons Lang 更新至 3.22.0，Robolectric 更新至 4.18。 [Gradle 发行说明](https://docs.gradle.org/9.9.1/release-notes.html) · [Bouncy Castle 安全修复](https://www.bouncycastle.org/resources/new-release-bouncy-castle-java-1-87/)
+- 本机补齐 Oracle JDK 27.0.1.1 的 11 月安全更新。CI 继续使用带签名校验的 Temurin 27，Temurin 对应补丁由上游发布后选取。JVM 目标仍为 26。 [Oracle 发行说明](https://www.oracle.com/java/technologies/javase/27-0-1-1-relnotes.html) · [Temurin 发布状态](https://adoptium.net/support)
+- 应用列表清理和最近任务旧值转换使用 `apply()` 发布内存值并异步持久化。偏好合同迁移继续同步提交并返回真实结果。系统保存提示对 `/sdcard/` 的处理仅识别宿主消息中的旧路径拼写。控制中心的步数 View 由插件创建，继续使用原生主题和 `TextView`，只在该类声明 AppCompat Lint 例外。
+- JDK 27 的 JVM 回归仍报告 DECK 测试夹具通过 `ReflectionHelpers` 写入 `final` 字段。后续用构造流程重建这些夹具，保留生产字段的只读合同与现有 JVM 访问限制。
+- 本地使用 JDK 27.0.1.1 验证 4,613 项 JVM 测试、完整 Debug Lint、Develop/R8 和 APK Hook API 边界。Debug Lint 有 0 个错误、327 个警告。AGP、Lint、JVM 测试和 Develop 的实际依赖图已核对，Develop 运行时仅包含本轮更新的 Commons Lang。
 - CodeQL Default setup 当前保留 Python / Actions，JS 已停用；两份 JS 随无消费者的设计工具删除。候选 `c156bc45` 的两项真实扫描无告警；日志解析器的指数回溯有独立超时复现与修复回归，另三项旧告警属于已移除、仅支持 npm/PyPI/Go 的辅助工具，不手工关闭 main 的历史告警。Java/Kotlin 的原 autobuild 因缺 JDK 27 失败。[手动构建试验](https://github.com/thetvplus/customiuizer-a14/actions/runs/42510958785) 已用 JDK 27.0.1 / Kotlin 2.4.21 / CodeQL 2.27.4 实际提取全部 429 个 Kotlin、5 个 Java 主源码及 3 个生成文件，Kotlin/Java 代码指标为 87,476/1,340 行，分析无告警；不据此扩大到未测工具版本或 Hook 行为。保留按需入口与提取完整性门禁，不新增定时扫描或重复 Python/Actions；SARIF 暂不上传 Security，持续 Java/Kotlin 告警接入仍待主线 Advanced 迁移。
 
 ## 验证与证据
@@ -195,12 +229,3 @@ Develop / Release 原有优化、资源压缩与签名隔离保持。R8 分析�
 | 原始材料 | ROM / iOS 原件、SQL / Smali、JUnit、APK / mapping、设备日志与 trace 私有留存；通知样板入口为忽略目录 `.di-evidence/verification-ii/`。实验环境按原值恢复并清理本次临时资源 |
 
 逆向来源和仍有效的技术取舍保留在功能专题、[M03 通知合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)、[遗留语义](LEGACY_SEMANTIC_CALIBRATION.md)与[退役依据](A14_FEATURE_RETIREMENTS.md)。过程追溯可查[整理前的固定版本](https://github.com/thetvplus/customiuizer-a14/blob/2a2a21e12401df16fb316756eacd93db476cc232/docs/maintenance/A14_REFINEMENT_ROADMAP.md)，不得以其中被后续修正的方案覆盖当前代码。
-
-## Harness 执行成本（2026-11-09）
-
-- CI 始终执行 Full、Develop/R8 与原正式门禁；移除无人消费的 `full` 输出及提交消息分支，只保留实际控制附加工具检查的 `tools`。本轮不因缩减门禁宣称提速。
-- `agent_verify` 对无 Python 变更的 catalog 输入直接保留全工具回退，免建导入图；单次计划内同一测试集合只查找一次，不留下跨任务缓存。三个代表计划的命令、场景、理由和待验项逐项相同。
-- 本机五次暖缓存对照：catalog 计划 103 次 AST 解析降为 0，中位约 426 ms 降为 0.01 ms；五个 Deck 文件的测试查找由 9 次降为 2。叶子 Python 工具仍执行 103 次必要解析，耗时差异不作提速结论；不推断整个开发任务或 Android 运行性能。
-- 已核对 CLI、受信配置与实际 MCP；保留模型/推理选择、安全设置、Shell Snapshot 和现有工具，未为缺乏实测收益的开关增加项目配置。Windows 的过滤器与 wrapper 约定合并到既有环境入口。
-
-- Agent Skills 按内容、引用和 A14 消费者从 92 项收敛到 25 项，开发资料减少 448 个文件、约 4.77 MB；移除视觉设计、组件/主题/动效、设计系统、跨平台专用和重复审查工具。保留完整 Perfetto 运行目录及性能、安全、构建、并发和测试入口；来源清单与实际安装目录由回归核对，删除项按 Git 历史恢复。Android 测试说明复用现有合同，清除未安装的上游 workflow 引用。

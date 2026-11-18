@@ -88,7 +88,8 @@ class LauncherGestureMatrixContractTest {
 
         assertTrue(features.contains("prefs.getInt(\"launcher_doubletap_action\", 1) != 1"))
         assertTrue(features.contains("LauncherGestureHooks.LauncherDoubleTapHook"))
-        assertTrue(hooks.contains("DoubleTapController(args[0] as Context, \"launcher_doubletap\")"))
+        assertTrue(hooks.contains("workspace.setTag(detectorTag, DoubleTapController(workspace.context))"))
+        assertTrue(hooks.contains("GlobalActions.handleAction(workspace.context, \"launcher_doubletap\")"))
 
         assertTrue(features.contains("prefs.getInt(\"launcher_pinch_action\", 1) != 1"))
         assertTrue(features.contains("LauncherGestureHooks.LauncherPinchHook"))

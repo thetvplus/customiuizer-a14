@@ -11,12 +11,13 @@ import java.lang.reflect.Method
 internal class PreparedHookBatch(
     private val installHook: (Method, MethodHook) -> CustomMethodUnhooker? = ModuleHelper::hookMethod,
 ) {
-    @Volatile private var active = false
+    @Volatile var isActive = false
+        private set
     private var attempted = false
 
     fun install(entries: List<Pair<Method, MethodHook>>): FeatureInstallResult {
         synchronized(this) {
-            if (attempted) return if (active) FeatureInstallResult.ALREADY_INSTALLED else FeatureInstallResult.FAILED_PERMANENT
+            if (attempted) return if (isActive) FeatureInstallResult.ALREADY_INSTALLED else FeatureInstallResult.FAILED_PERMANENT
             attempted = true
         }
         if (entries.isEmpty()) return FeatureInstallResult.FAILED_PERMANENT
@@ -26,7 +27,7 @@ internal class PreparedHookBatch(
             for ((method, callback) in entries) {
                 val gated = object : MethodHook(callback.mPriority) {
                     override fun intercept(chain: XposedInterface.Chain): Any? = when {
-                        !active -> chain.proceed()
+                        !isActive -> chain.proceed()
                         callback.mIsReturnConstant -> callback.mReturnConstantValue
                         else -> callback.intercept(chain)
                     }
@@ -35,7 +36,7 @@ internal class PreparedHookBatch(
                 handles.add(handle)
             }
             if (handles.size == entries.size) {
-                active = true
+                isActive = true
                 return FeatureInstallResult.INSTALLED
             }
         } catch (t: Throwable) {

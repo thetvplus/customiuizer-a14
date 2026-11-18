@@ -85,6 +85,7 @@ class VolumePercentageLifecycleTest {
         val chain = Chain(Listener(first), SeekBar(context).apply { max = 15000 }, 5000)
         hook.intercept(chain)
         assertEquals(1, chain.proceeds)
+        assertEquals(0, chain.argReads)
         assertEquals(View.GONE, pct.visibility)
         assertEquals("", pct.text.toString())
     }
@@ -284,10 +285,23 @@ class VolumePercentageLifecycleTest {
 
     private class Chain(val listener: Listener, val seekBar: SeekBar, val progress: Int, val failure: Throwable? = null, val fromUser: Boolean = true) : XposedInterface.Chain {
         var proceeds = 0
+        var argReads = 0
+            private set
         override fun getExecutable(): Executable = Any::class.java.getMethod("toString")
         override fun getThisObject(): Any = listener
-        override fun getArgs(): List<Any?> = listOf(seekBar, progress, fromUser)
-        override fun getArg(index: Int): Any? = getArgs()[index]
+        override fun getArgs(): List<Any?> = error("Read only the native arguments used by the hook")
+        override fun getArg(index: Int): Any {
+            argReads++
+            return when (index) {
+                0 -> seekBar
+                1 -> {
+                    check(fromUser) { "Programmatic progress uses native column state" }
+                    progress
+                }
+                2 -> fromUser
+                else -> error("Unexpected argument $index")
+            }
+        }
         override fun proceed(): Any? { proceeds++; failure?.let { throw it }; return null }
         override fun proceed(args: Array<Any>): Any? = proceed()
         override fun proceedWith(target: Any): Any = error("unused")

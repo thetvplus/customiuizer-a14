@@ -1314,16 +1314,24 @@ class ProtectedWorkflowTest(unittest.TestCase):
 
 
 class FormalTargetAndNotesTest(unittest.TestCase):
-    def test_repository_target_matches_the_published_milestone(self):
+    def test_repository_target_matches_the_designated_version(self):
         policy = json.loads((REPO_ROOT / "tools/release-policy.json").read_text(encoding="utf-8"))
         name, code = release.source_version((REPO_ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
-        self.assertEqual(("r14.27.9", 310), (name, code))
+        self.assertEqual(("r14.27.10", 311), (name, code))
+        retired_targets = (
+            ("r14.25.5", 254), ("r14.25.6", 255), ("r14.25.7", 256), ("r14.25.8", 257),
+            ("r14.25.9", 258), ("r14.25.11", 260), ("r14.26.1", 261), ("r14.26.3", 263),
+            ("r14.26.5", 265), ("r14.26.7", 267), ("r14.26.9", 269), ("r14.26.11", 281),
+            ("r14.26.17", 277), ("r14.27.1", 301), ("r14.27.3", 304), ("r14.27.5", 305),
+            ("r14.27.7", 307), ("r14.27.9", 310),
+        )
         with patch.object(release, "POLICY", policy):
             release.release_target(name, code)
-            for retired in (("r14.25.5", 254), ("r14.25.6", 255), ("r14.25.7", 256), ("r14.25.8", 257), ("r14.25.9", 258), ("r14.25.11", 260), ("r14.26.1", 261), ("r14.26.3", 263), ("r14.26.5", 265), ("r14.26.7", 267), ("r14.26.9", 269), ("r14.26.11", 281), ("r14.26.17", 277), ("r14.27.1", 301), ("r14.27.3", 304), ("r14.27.5", 305), ("r14.27.7", 307), (name, code - 1)):
+            for retired in (*retired_targets, (name, code - 1)):
                 with self.assertRaisesRegex(ValueError, "designated formal"):
                     release.release_target(*retired)
-        self.assertEqual({name: "9224160f6b13be43a9dd4a6da8a1ff92a0e795c0"}, policy["published_notes_revisions"])
+        self.assertEqual({"r14.27.9": "9224160f6b13be43a9dd4a6da8a1ff92a0e795c0"},
+                         policy["published_notes_revisions"])
         self.assertEqual([], policy["consolidated_releases"])
         self.assertEqual({"r14.25.9", "r14.26.11"}, set(policy["archived_source_snapshots"]))
         self.assertEqual({}, policy["cumulative_releases"])

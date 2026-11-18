@@ -516,25 +516,35 @@ object LauncherIconHooks {
     @JvmStatic
     fun TitleFontSizeHook(lpparam: PackageReadyParam) {
         installIconStyleSnapshot()
-        ModuleHelper.findAndHookMethod("com.miui.home.launcher.ItemIcon", lpparam.classLoader, "onFinishInflate", titleFontHook { chain, _ ->
-            XposedHelpers.getObjectField(chain.thisObject, "mTitle") as? TextView
+        val loader = lpparam.classLoader
+        val itemIcon = XposedHelpers.findClass("com.miui.home.launcher.ItemIcon", loader)
+        val titleView = XposedHelpers.findField(itemIcon, "mTitleView")
+        ModuleHelper.findAndHookMethod(itemIcon, "onFinishInflate", titleFontHook { chain, _ ->
+            titleView.get(chain.thisObject) as? TextView
         })
+
+        val shortcutIcon = "com.miui.home.launcher.ShortcutIcon"
+        val launcher = "com.miui.home.launcher.Launcher"
         val resultHook = titleFontHook { _, result ->
-            result?.let { XposedHelpers.getObjectField(it, "mTitle") as? TextView }
+            result?.let { titleView.get(it) as? TextView }
         }
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.ShortcutIcon", lpparam.classLoader, "fromXml", resultHook)
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.ShortcutIcon", lpparam.classLoader, "createShortcutIcon", resultHook)
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.common.Utilities", lpparam.classLoader,
-            "adaptTitleStyleToWallpaper", wallpaperTitleFontHook())
+        // The overload taking a trailing boolean delegates to this implementation.
+        ModuleHelper.findAndHookMethod(shortcutIcon, loader, "fromXml",
+            Int::class.javaPrimitiveType!!, launcher, ViewGroup::class.java,
+            "com.miui.home.launcher.ShortcutInfo", resultHook)
+        ModuleHelper.findAndHookMethod(shortcutIcon, loader, "createShortcutIcon",
+            Int::class.javaPrimitiveType!!, launcher, ViewGroup::class.java, resultHook)
+        ModuleHelper.findAndHookMethod("com.miui.home.launcher.common.Utilities", loader,
+            "adaptTitleStyleToWallpaper", Context::class.java, TextView::class.java,
+            Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, wallpaperTitleFontHook(lpparam.packageName))
     }
 
-    internal fun wallpaperTitleFontHook(): MethodHook {
-        // One Launcher installation owns this ID. Theme/configuration changes do not
-        // change its resource table; a missing ID also needs no repeated lookup.
+    internal fun wallpaperTitleFontHook(resourcePackage: String): MethodHook {
+        // Both Launcher builds use icon_title in their own resource table.
         var titleId = -1
         return titleFontHook { chain, _ ->
             val title = chain.getArg(1) as? TextView ?: return@titleFontHook null
-            if (titleId < 0) titleId = title.resources.getIdentifier("icon_title", "id", "com.miui.home")
+            if (titleId < 0) titleId = title.resources.getIdentifier("icon_title", "id", resourcePackage)
             title.takeIf { titleId != 0 && it.id == titleId }
         }
     }
@@ -544,8 +554,11 @@ object LauncherIconHooks {
             val result = chain.proceed()
             val size = iconStyleConfig.titleFontSizeSp
             if (size <= 5f) return result
-            try { title(chain, result)?.setTextSize(TypedValue.COMPLEX_UNIT_SP, size) }
-            catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t); XposedHelpers.log(t) }
+            ModuleHelper.guarded {
+                val view = title(chain, result) ?: return@guarded
+                val px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, size, view.resources.displayMetrics)
+                if (view.textSize != px) view.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
+            }
             return result
         }
     }

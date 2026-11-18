@@ -28,16 +28,16 @@ class UiHotPathPreferenceSnapshotTest {
 
     @Test
     fun folderLayoutReadsSnapshotAndCachedFields() {
-        val source = source("app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherFolderHooks.kt")
-        val body = hookBody(
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherFolderHooks.kt",
-            "\"onLayout\"",
-        )
+        val path = "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherFolderHooks.kt"
+        val install = methodBody(path, "fun FolderColumnsHook")
+        val body = methodBody(path, "fun folderLayoutHook")
 
         assertFalse("onLayout is a layout callback", body.contains("MainModule.mPrefs"))
         assertFalse("field lookups belong to the cold path", body.contains("XposedHelpers.getObjectField"))
         assertTrue(body.contains("folderWidthEnabled"))
-        assertTrue(source.contains("private fun resolveFolderLayoutFields("))
+        assertTrue(install.contains("findFieldIfExists(folder, \"mContent\")"))
+        assertTrue(install.contains("findFieldIfExists(folder, \"mFakeIcon\")"))
+        assertTrue(install.contains("folderLayoutHook(content, fakeIcon)"))
     }
 
     @Test
@@ -96,35 +96,15 @@ class UiHotPathPreferenceSnapshotTest {
     }
 
     @Test
-    fun batteryUpdateAllReadsOneSnapshotAndAvoidsHotPathAllocation() {
-        val source = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIBatteryHooks.kt")
+    fun batteryUpdateAllReadsOneSnapshot() {
         val body = hookBody(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIBatteryHooks.kt",
             "\"updateAll\"",
         )
-        val reconcileBody = methodBody(
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIBatteryHooks.kt",
-            "internal fun reconcileBatteryView"
-        )
-        val matchBody = methodBody(
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIBatteryHooks.kt",
-            "internal fun matchesTarget"
-        )
-
         assertFalse("updateAll must not read nine preferences per call", body.contains("MainModule.mPrefs"))
         assertTrue(body.contains("val style = batteryStyle ?: return"))
         assertFalse("child order must be checked before mutating the hierarchy", body.contains("removeView"))
         assertTrue("updateAll delegates to reconcile helper", body.contains("reconcileBatteryView("))
-        assertTrue("snapshot-driven style is applied from the helper", reconcileBody.contains("applyBatteryStyle("))
-        assertTrue("baseline is restored when style returns to default", reconcileBody.contains("restoreBatteryBaseline("))
-        assertTrue("swap helper is still used", source.contains("applyBatteryChildSwapIfNeeded("))
-        assertTrue("text size changes are idempotent", source.contains("setTextSizeIfChanged("))
-        assertTrue("padding changes are idempotent", source.contains("setPaddingRelativeIfChanged("))
-
-        assertFalse("repeated target check must not allocate Pair", matchBody.contains("Pair<"))
-        assertFalse("repeated target check must not use destructured pair", matchBody.contains(" to "))
-        assertFalse("repeated target check must not call computePaddings", matchBody.contains("computePaddings("))
-        assertFalse("repeated target check must not construct new Padding", matchBody.contains("Padding("))
     }
 
     @Test

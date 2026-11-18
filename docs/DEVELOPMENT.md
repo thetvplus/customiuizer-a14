@@ -8,7 +8,7 @@
 
 - **首次写入、任务切换或冲突**。核对相关 Issue / PR、工作树、HEAD、Worktree 和目标远端。独立任务使用对应工作分支，记录范围和下一步。一个 Worktree 由一方写入；范围冲突时暂停重叠部分。
 - **续接与交接**。沿用当前任务，刷新已变化的归属、授权和证据。共享写入前核对涉及的引用和 diff。远端不可用时将协作状态标为未知。交接记录任务入口、分支、HEAD、变更、验证、待办和推送状态。
-- **分支清理**。在已授权、成果等价纳入且存在可恢复来源时，确认 HEAD、开放 PR、活动 Worktree 和协作依赖。先保存远端成果，再逐支清理。
+- **分支清理**。先读回实际远端默认分支与目标引用，再核对开放 PR、关联 Worktree 和协作依赖。确认分支成果已等价纳入，且有可恢复来源后，逐支删除并读回。清理 Actions 运行与产物见 [RELEASE](RELEASE.md#actions产物与证明清理)。
 
 ### 主线提交与发行节奏
 
@@ -43,7 +43,8 @@ GitHub CLI / API 仅作为已有 Git 网络故障证据下的备用路径。先�
 
 ## 环境
 
-- JDK 27，JAVA_HOME 指向 JDK 根目录；Gradle daemon 与 Java toolchain 使用 27；稳定版 Kotlin 2.4.21 的 Java / Kotlin 字节码目标统一为 26。D8 / R8、Host 测试和 A14 设备分别验证，不因构建 JDK 升级而扩展运行期 API。Android 14 不提供全部桌面 JDK API，需分别验证语言、DEX 和运行期能力。
+- 使用已安装安全补丁的 JDK 27，`JAVA_HOME` 指向 JDK 根目录。Gradle daemon 与 Java toolchain 使用 27，Kotlin 2.4.21 的 Java / Kotlin 字节码目标统一为 26。D8 / R8、Host 测试和 A14 运行期 API 分别验证。
+- Gradle Wrapper 固定发行包版本和官方 SHA-256。更新 JDK 后核对 daemon、编译工具链及 JVM 测试实际选择的运行时。CI 的 Temurin 安装保留强制下载和签名验证。
 - Python 3.12+：`python -m pip install -r tools/requirements.txt`。Windows 可设置 `$env:PYTHONUTF8='1'` 统一子进程编码。
 - Android SDK 安装项以 [ci_install_android_sdk.sh](../tools/ci_install_android_sdk.sh) 为准；本机 `local.properties` 的 `sdk.dir` 指向 SDK 根目录，不入库。compileSdk 不改变 minSdk / targetSdk 34 的运行边界。
 - 使用仓库 wrapper；版本以 [libs.versions.toml](../gradle/libs.versions.toml)、[根构建](../build.gradle.kts)、[app 构建](../app/build.gradle.kts) 和 [wrapper 配置](../gradle/wrapper/gradle-wrapper.properties) 为准。

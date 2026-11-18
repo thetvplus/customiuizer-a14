@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import io.github.libxposed.api.XposedInterface
@@ -40,6 +41,7 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.HookInstallStateMachine
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.OwnedRegistrations
+import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.StatusBarDisplayRegistry
 import tv.withaibuild.customiuizer.mods.utils.StatusBarDisplayState
@@ -53,6 +55,7 @@ import tv.withaibuild.customiuizer.utils.Helpers
 import tv.withaibuild.customiuizer.utils.HookUtils
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.ref.WeakReference
+import java.lang.reflect.Field
 import java.net.NetworkInterface
 import java.util.ArrayList
 import java.util.HashSet
@@ -231,6 +234,9 @@ object SystemUIStatusBarHooks {
     private val StatusBarCls = "com.android.systemui.statusbar.phone.CentralSurfacesImpl"
 
     val textIconTagId = ResourceHooks.getFakeResId("text_icon_tag")
+
+    private const val MOBILE_VIEW_CLASS = "com.android.systemui.statusbar.StatusBarMobileView"
+    private const val MOBILE_ICON_STATE_CLASS = "com.android.systemui.statusbar.phone.StatusBarSignalPolicy\$MobileIconState"
 
     private val viewInitedTag = ResourceHooks.getFakeResId("view_inited_tag")
 
@@ -706,10 +712,11 @@ object SystemUIStatusBarHooks {
     private fun installNetSpeedSecondRowHook(lpparam: PackageReadyParam) {
         netSpeedSecondRowClassLoader = lpparam.classLoader
         netSpeedSecondRowHookInstaller.install {
-            ModuleHelper.hookAllMethodsSilently(
+            ModuleHelper.findAndHookMethodSilently(
                 "com.android.systemui.statusbar.phone.StatusBarIconControllerImpl",
                 lpparam.classLoader,
                 "setNetworkSpeedIcon",
+                "com.android.systemui.statusbar.policy.NetworkSpeedState",
                 netSpeedSecondRowHookCallback,
             )
         }
@@ -1024,7 +1031,7 @@ object SystemUIStatusBarHooks {
 
         installStatusBarViewLifecycleHook(lpparam)
 
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView", lpparam.classLoader, "updateCutoutLocation", object : MethodHook(-1000) {
+        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView", lpparam.classLoader, "updateCutoutLocation", object : MethodHook(-1000) {
             override fun after(callback: AfterHookCallback) {
                 val mCurrentStatusBarType = XposedHelpers.getObjectField(callback.getThisObject(), "mCurrentStatusBarType") as Int
                 val leftLayout = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "leftLayout") as LinearLayout?
@@ -1169,7 +1176,7 @@ object SystemUIStatusBarHooks {
                 } else mainLabel
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateUpdateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, stateUpdateHook)
         // Both fuxi ROMs call updateState from these two entry points. Refresh once after the
         // caller finishes, including the initial-state branch that never calls updateState.
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "setDripEnd", Boolean::class.javaPrimitiveType!!, stateUpdateHook)
@@ -1184,7 +1191,7 @@ object SystemUIStatusBarHooks {
         })
         val dualRows = currentOrBuildStatusBarLayoutSnapshot().digitalSignalDualRows
         if (dualRows) {
-            ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", object : MethodHook() {
+            ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", String::class.java, List::class.java, object : MethodHook() {
                 override fun before(callback: BeforeHookCallback) {
                     val iconStates = callback.getArg(1) as List<*>
                     if (iconStates.size == 2) {
@@ -1208,7 +1215,6 @@ object SystemUIStatusBarHooks {
                                 XposedHelpers.setObjectField(mainIconState, field, XposedHelpers.getObjectField(subIconState, field))
                             }
                         }
-                        callback.getArgs()[1] = iconStates
                     }
                 }
             })
@@ -1216,32 +1222,22 @@ object SystemUIStatusBarHooks {
     }
 
     private fun getSignalLevel(res: Resources, resId: Int, cache: SparseIntArray): Int {
-        if (resId == 0) return 6
+        if (resId == 0) return 0
         val idx = cache.indexOfKey(resId)
         if (idx >= 0) return cache.valueAt(idx)
-        var level = 6
+        var level = 0
         try {
             val name = res.getResourceName(resId)
-            if (name != null && name.contains("signal")) {
-                if (name.contains("null")) {
-                    level = 6
-                } else {
-                    val i = name.lastIndexOf("signal_")
-                    if (i != -1) {
-                        var start = i + "signal_".length
-                        var end = start
-                        while (end < name.length && Character.isDigit(name[end])) end++
-                        if (end > start) {
-                            try {
-                                level = name.substring(start, end).toInt()
-                                if (level < 0 || level > 5) level = 6
-                            } catch (ignore: NumberFormatException) {
-                            }
-                        }
-                    }
+            if (!name.contains("null")) {
+                val marker = name.lastIndexOf("signal_")
+                if (marker >= 0) {
+                    val start = marker + "signal_".length
+                    var end = start
+                    while (end < name.length && Character.isDigit(name[end])) end++
+                    level = name.substring(start, end).toIntOrNull()?.takeIf { it in 0..5 } ?: 0
                 }
             }
-        } catch (t: Throwable) {
+        } catch (_: Resources.NotFoundException) {
         }
         cache.put(resId, level)
         return level
@@ -1252,72 +1248,181 @@ object SystemUIStatusBarHooks {
     private val DUAL_SIGNAL_BLACK_TINT by lazy { ColorStateList.valueOf(Color.BLACK) }
 
     private val MOBILE_STATE_SYNC_FIELDS = arrayOf("showName", "activityIn", "activityOut", "dataConnected")
+    private val dualSignalLevelTag = ResourceHooks.getFakeResId("dual_signal_secondary_level")
 
-    private fun applyDualSignalDrawables(mobileView: Any?, mobileIconState: Any?, subLevel: Int, systemUIRes: Resources?, signalResToLevelMap: SparseIntArray, dualSignalResIds: Array<Array<IntArray>>, selectedIconStyle: String): Boolean {
-        if (systemUIRes == null) return false
-        val mainSignalResId = XposedHelpers.getIntField(mobileIconState, "strengthId")
-        var mainLevel = getSignalLevel(systemUIRes, mainSignalResId, signalResToLevelMap)
-        if (mainLevel == 6) mainLevel = 0
-        var subLevelVar = subLevel
-        if (subLevelVar == 6) subLevelVar = 0
-        val mLight = XposedHelpers.getBooleanField(mobileView, "mLight")
-        val mUseTint = XposedHelpers.getBooleanField(mobileView, "mUseTint")
-        val mSmallRoaming = XposedHelpers.getObjectField(mobileView, "mSmallRoaming")
-        val mMobile = XposedHelpers.getObjectField(mobileView, "mMobile")
-        if (mMobile == null || mSmallRoaming == null) return false
-        val colorModeIndex = if (mUseTint && selectedIconStyle != "theme") {
-            2
-        } else if (!mLight) {
-            1
-        } else {
-            0
+    internal class DualRowSignalBinding(
+        controllerClass: Class<*>,
+        viewClass: Class<*>,
+        stateClass: Class<*>,
+        private val drawables: Array<Array<IntArray>>,
+        private val hasTintAssets: Boolean,
+    ) {
+        private val context = XposedHelpers.findField(controllerClass, "mContext")
+        private val currentState = XposedHelpers.findField(viewClass, "mState")
+        private val primaryImage = XposedHelpers.findField(viewClass, "mMobile")
+        private val secondaryImage = XposedHelpers.findField(viewClass, "mSmallRoaming")
+        private val roamingImage = XposedHelpers.findField(viewClass, "mMobileRoaming")
+        private val hdImage = XposedHelpers.findField(viewClass, "mSmallHd")
+        private val light = XposedHelpers.findField(viewClass, "mLight")
+        private val useTint = XposedHelpers.findField(viewClass, "mUseTint")
+        private val strength = XposedHelpers.findField(stateClass, "strengthId")
+        private val subId = XposedHelpers.findField(stateClass, "subId")
+        private val visible = XposedHelpers.findField(stateClass, "visible")
+        private val airplane = XposedHelpers.findField(stateClass, "airplane")
+        private val dataConnected = XposedHelpers.findField(stateClass, "dataConnected")
+        private val syncFields = MOBILE_STATE_SYNC_FIELDS.map { XposedHelpers.findField(stateClass, it) }.toTypedArray()
+        private val levels = SparseIntArray()
+        private var resources: Resources? = null
+        private var primarySubId = -1
+        private var secondaryLevel = 0
+
+        val capturePair = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                val states = callback.getArg(1) as List<*>
+                if (states.size != 2) {
+                    primarySubId = -1
+                    return
+                }
+                val res = resources ?: (context.get(callback.getThisObject()) as Context).resources.also { res ->
+                    for (level in 0..5) {
+                        levels.put(res.getIdentifier("stat_sys_signal_$level", "drawable", "com.android.systemui"), level)
+                    }
+                    levels.put(res.getIdentifier("stat_sys_signal_null", "drawable", "com.android.systemui"), 0)
+                    resources = res
+                }
+                val primary = states[0]
+                val secondary = states[1]
+                secondaryLevel = getSignalLevel(res, strength.getInt(secondary), levels)
+                primarySubId = subId.getInt(primary)
+                visible.setBoolean(secondary, false)
+                if (dataConnected.getBoolean(secondary)) {
+                    for (field in syncFields) field.set(primary, field.get(secondary))
+                }
+            }
         }
-        val sim1ResId = dualSignalResIds[0][mainLevel][colorModeIndex]
-        val sim2ResId = dualSignalResIds[1][subLevelVar][colorModeIndex]
-        if (sim1ResId == 0 || sim2ResId == 0) return false
-        XposedHelpers.callMethod(mMobile, "setImageResource", sim1ResId)
-        XposedHelpers.callMethod(mSmallRoaming, "setImageResource", sim2ResId)
-        var tintList: ColorStateList? = null
-        val mMobileRoaming = XposedHelpers.getObjectField(mobileView, "mMobileRoaming")
-        if (mMobileRoaming != null) {
-            tintList = XposedHelpers.callMethod(mMobileRoaming, "getImageTintList") as ColorStateList?
+
+        val afterSubscriptionsChanged = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (primarySubId == -1 || callback.getThrowable() != null) return
+                // setSubs may publish the old list before removing its views, then return without publishing another list.
+                if ((callback.getArg(0) as List<*>).size != 2) primarySubId = -1
+            }
         }
-        if (tintList == null) {
-            tintList = if (mLight) DUAL_SIGNAL_WHITE_TINT else DUAL_SIGNAL_BLACK_TINT
+
+        private fun isPrimary(state: Any): Boolean =
+            primarySubId != -1 && subId.getInt(state) == primarySubId &&
+                visible.getBoolean(state) && !airplane.getBoolean(state)
+
+        private fun updateVisibility(view: Any?, state: Any) {
+            if (!isPrimary(state)) return
+            (hdImage.get(view) as ImageView?)?.visibility = View.GONE
+            (secondaryImage.get(view) as ImageView?)?.visibility = View.VISIBLE
         }
-        XposedHelpers.callMethod(mMobile, "setImageTintList", tintList)
-        XposedHelpers.callMethod(mSmallRoaming, "setImageTintList", tintList)
-        return true
+
+        val stateUpdate = object : MethodHook() {
+            private var initAction = false
+
+            override fun before(callback: BeforeHookCallback) {
+                if (callback.getMember().name != "updateState") {
+                    initAction = primarySubId != -1 && currentState.get(callback.getThisObject()) == null
+                }
+            }
+
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getMember().name == "updateState") {
+                    if (primarySubId == -1 || callback.getThrowable() != null) return
+                    val state = callback.getArg(0) ?: return
+                    updateVisibility(callback.getThisObject(), state)
+                    return
+                }
+                val wasInitializing = initAction
+                initAction = false
+                if (primarySubId == -1 || callback.getThrowable() != null) return
+                val view = callback.getThisObject() as View
+                if (wasInitializing) {
+                    val state = callback.getArg(0) ?: return
+                    updateVisibility(view, state)
+                } else {
+                    refreshSecondary(view)
+                }
+            }
+        }
+
+        private fun colorMode(view: View, isLight: Boolean): Int = when {
+            hasTintAssets && useTint.getBoolean(view) -> 2
+            isLight -> 0
+            else -> 1
+        }
+
+        private fun refreshSecondary(view: View) {
+            val displayed = view.getTag(dualSignalLevelTag) as? Int ?: return
+            val level = secondaryLevel
+            if (displayed == level) return
+            val state = currentState.get(view) ?: return
+            if (!isPrimary(state)) return
+            val secondary = secondaryImage.get(view) as ImageView? ?: return
+            val drawable = drawables[1][level][colorMode(view, light.getBoolean(view))]
+            if (drawable == 0) return
+            // Equal primary states bypass native drawing. Replace only the changed lower row.
+            secondary.setImageResource(drawable)
+            view.setTag(dualSignalLevelTag, level)
+        }
+
+        // Preserve the final drawable write for paired SIMs when the dots style also hooks this method.
+        val drawAfterDarkness = object : MethodHook(XposedInterface.PRIORITY_HIGHEST) {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val res = resources ?: return
+                val view = callback.getThisObject() as View
+                val state = currentState.get(view) ?: return
+                if (!isPrimary(state)) return
+                val primary = primaryImage.get(view) as ImageView? ?: return
+                val secondary = secondaryImage.get(view) as ImageView? ?: return
+                val isLight = light.getBoolean(view)
+                val mode = colorMode(view, isLight)
+                val primaryLevel = getSignalLevel(res, strength.getInt(state), levels)
+                val level = secondaryLevel
+                val primaryDrawable = drawables[0][primaryLevel][mode]
+                val secondaryDrawable = drawables[1][level][mode]
+                if (primaryDrawable == 0 || secondaryDrawable == 0) return
+                primary.setImageResource(primaryDrawable)
+                secondary.setImageResource(secondaryDrawable)
+                val tint = (roamingImage.get(view) as ImageView?)?.imageTintList
+                    ?: if (isLight) DUAL_SIGNAL_WHITE_TINT else DUAL_SIGNAL_BLACK_TINT
+                primary.imageTintList = tint
+                secondary.imageTintList = tint
+                view.setTag(dualSignalLevelTag, level)
+            }
+        }
     }
 
     @JvmStatic
     fun DualRowSignalHook(lpparam: PackageReadyParam) {
-        val mobileView = XposedHelpers.findClass("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader)
-        val smallHd = optionalMobileIcon(mobileView, "mSmallHd")
-        val smallRoaming = optionalMobileIcon(mobileView, "mSmallRoaming")
-        val mobileTypeSingle = MainModule.mPrefs.getBoolean("system_statusbar_mobiletype_single")
-        if (!mobileTypeSingle) {
-            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_half_to_top_distance", 3)
-            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_left_inout_over_strength", 0)
-            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_middle_to_strength_start", -0.4f)
-        }
+        val loader = lpparam.classLoader
+        val mobileView = XposedHelpers.findClass(MOBILE_VIEW_CLASS, loader)
+        val mobileState = XposedHelpers.findClass(MOBILE_ICON_STATE_CLASS, loader)
+        val iconController = XposedHelpers.findClass("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", loader)
+        val signalPolicy = XposedHelpers.findClass("com.android.systemui.statusbar.phone.MiuiStatusBarSignalPolicy", loader)
+        val application = XposedHelpers.findClass("com.android.systemui.SystemUIApplication", loader)
 
         val colorModeList = arrayOf("", "dark", "tint")
         val dualSignalResIds = Array(2) { Array(6) { IntArray(colorModeList.size) } }
         val selectedIconStyle = MainModule.mPrefs.getString("system_statusbar_dualsimin2rows_style", "")
+        val hasTintAssets = selectedIconStyle != "theme"
+        val binding = DualRowSignalBinding(iconController, mobileView, mobileState, dualSignalResIds, hasTintAssets)
 
-        ModuleHelper.findAndHookMethod("com.android.systemui.SystemUIApplication", lpparam.classLoader, "onCreate", object : MethodHook() {
+        val prepareAssets = object : MethodHook() {
             private var isHooked = false
             override fun after(callback: AfterHookCallback) {
-                if (!isHooked) {
+                if (!isHooked && callback.getThrowable() == null) {
                     isHooked = true
-                    val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getApplicationContext") as Context
+                    val mContext = (callback.getThisObject() as Context).applicationContext
                     val modRes = ModuleHelper.getModuleRes(mContext)
                     for (slotIndex in 0..1) {
                         val slot = slotIndex + 1
                         for (lvl in 0..5) {
                             for ((colorModeIndex, colorMode) in colorModeList.withIndex()) {
-                                if (selectedIconStyle != "theme" || colorMode != "tint") {
+                                if (hasTintAssets || colorMode != "tint") {
                                     val dualIconResName = "statusbar_signal_${slot}_${lvl}" + (if (colorMode.isNotEmpty()) "_$colorMode" else "") + (if (selectedIconStyle.isNotEmpty()) "_$selectedIconStyle" else "")
                                     val iconResId = modRes.getIdentifier(dualIconResName, "drawable", Helpers.modulePkg)
                                     dualSignalResIds[slotIndex][lvl][colorModeIndex] =
@@ -1328,101 +1433,17 @@ object SystemUIStatusBarHooks {
                     }
                 }
             }
-        })
-
-        val systemUIRes = arrayOfNulls<Resources>(1)
-        val signalResToLevelMap = SparseIntArray()
-        val signalStates = intArrayOf(-1, -1) // main-subId, sub-level
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", object : MethodHook() {
-            private var isHooked = false
-            override fun before(callback: BeforeHookCallback) {
-                if (!isHooked) {
-                    isHooked = true
-                    val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
-                    val res = mContext.resources
-                    systemUIRes[0] = res
-                    signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_0", "drawable", lpparam.packageName), 0)
-                    signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_1", "drawable", lpparam.packageName), 1)
-                    signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_2", "drawable", lpparam.packageName), 2)
-                    signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_3", "drawable", lpparam.packageName), 3)
-                    signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_4", "drawable", lpparam.packageName), 4)
-                    signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_5", "drawable", lpparam.packageName), 5)
-                    signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_null", "drawable", lpparam.packageName), 6)
-                }
-                val iconStates = callback.getArg(1) as List<*>
-                if (iconStates.size == 2) {
-                    val mainIconState = iconStates[0]
-                    val subIconState = iconStates[1]
-                    XposedHelpers.setObjectField(subIconState, "visible", false)
-                    val subSignalResId = XposedHelpers.getIntField(subIconState, "strengthId")
-                    signalStates[0] = XposedHelpers.getIntField(mainIconState, "subId")
-                    signalStates[1] = getSignalLevel(systemUIRes[0]!!, subSignalResId, signalResToLevelMap)
-                    val subDataConnected = XposedHelpers.getObjectField(subIconState, "dataConnected") as Boolean
-                    if (subDataConnected) {
-                        for (field in MOBILE_STATE_SYNC_FIELDS) {
-                            XposedHelpers.setObjectField(mainIconState, field, XposedHelpers.getObjectField(subIconState, field))
-                        }
-                    }
-                    callback.getArgs()[1] = iconStates
-                }
-            }
-        })
-
-        val stateUpdateHook = object : MethodHook() {
-            private var initAction = false
-            override fun before(callback: BeforeHookCallback) {
-                if (callback.getMember().name == "updateState") {
-                    return
-                }
-                val mState = XposedHelpers.getObjectField(callback.getThisObject(), "mState")
-                initAction = mState == null
-            }
-            override fun after(callback: AfterHookCallback) {
-                val updateStateMethod = callback.getMember().name == "updateState"
-                if (updateStateMethod || initAction) {
-                    val mobileIconState = callback.getArg(0)
-                    val visible = XposedHelpers.getBooleanField(mobileIconState, "visible")
-                    if (!visible) return
-                    val airplane = XposedHelpers.getBooleanField(mobileIconState, "airplane")
-                    if (airplane) return
-                    val subId = XposedHelpers.getIntField(mobileIconState, "subId")
-                    if (signalStates[0] == -1 || subId != signalStates[0]) return
-                    (smallHd?.get(callback.getThisObject()) as? View)?.visibility = View.GONE
-                    (smallRoaming?.get(callback.getThisObject()) as? View)?.visibility = View.VISIBLE
-                }
-                if (!updateStateMethod) {
-                    initAction = false
-                }
-            }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateUpdateHook)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", stateUpdateHook)
 
-        val resetImageDrawable = object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val mobileIconState = XposedHelpers.getObjectField(callback.getThisObject(), "mState")
-                if (mobileIconState == null) return
-                val visible = XposedHelpers.getBooleanField(mobileIconState, "visible")
-                val airplane = XposedHelpers.getBooleanField(mobileIconState, "airplane")
-                val subId = XposedHelpers.getIntField(mobileIconState, "subId")
-                if (!visible || airplane || subId != signalStates[0]) return
-                applyDualSignalDrawables(callback.getThisObject(), mobileIconState, signalStates[1], systemUIRes[0], signalResToLevelMap, dualSignalResIds, selectedIconStyle)
-            }
-        }
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyDarknessInternal", resetImageDrawable)
-
-        val onDarkChangedSetter = object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val mobileIconState = XposedHelpers.getObjectField(callback.getThisObject(), "mState")
-                if (mobileIconState == null) return
-                val visible = XposedHelpers.getBooleanField(mobileIconState, "visible")
-                val airplane = XposedHelpers.getBooleanField(mobileIconState, "airplane")
-                val subId = XposedHelpers.getIntField(mobileIconState, "subId")
-                if (!visible || airplane || subId != signalStates[0]) return
-                applyDualSignalDrawables(callback.getThisObject(), mobileIconState, signalStates[1], systemUIRes[0], signalResToLevelMap, dualSignalResIds, selectedIconStyle)
-            }
-        }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "onDarkChanged", onDarkChangedSetter)
+        val entries = mutableListOf(
+            application.getDeclaredMethod("onCreate") to prepareAssets,
+            iconController.getDeclaredMethod("setMobileIcons", String::class.java, List::class.java) to binding.capturePair,
+            signalPolicy.getDeclaredMethod("setSubs", List::class.java) to binding.afterSubscriptionsChanged,
+            mobileView.getDeclaredMethod("applyMobileState", mobileState) to binding.stateUpdate,
+            mobileView.getDeclaredMethod("updateState", mobileState) to binding.stateUpdate,
+            // The ROM's onDarkChanged ends here after writing the native tint and drawables.
+            mobileView.getDeclaredMethod("applyDarknessInternal") to binding.drawAfterDarkness,
+        )
 
         val rightMargin = MainModule.mPrefs.getInt("system_statusbar_dualsimin2rows_rightmargin", 0)
         val leftMargin = MainModule.mPrefs.getInt("system_statusbar_dualsimin2rows_leftmargin", 0)
@@ -1458,7 +1479,14 @@ object SystemUIStatusBarHooks {
                     }
                 }
             }
-            ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "setDripEnd", Boolean::class.javaPrimitiveType!!, initHook)
+            entries += mobileView.getDeclaredMethod("setDripEnd", Boolean::class.javaPrimitiveType) to initHook
+        }
+        check(PreparedHookBatch().install(entries).isActive)
+
+        if (!MainModule.mPrefs.getBoolean("system_statusbar_mobiletype_single")) {
+            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_half_to_top_distance", 3)
+            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_left_inout_over_strength", 0)
+            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_middle_to_strength_start", -0.4f)
         }
     }
 
@@ -1844,21 +1872,38 @@ object SystemUIStatusBarHooks {
         }
     }
 
-    private var measureTime = 0L
+    private const val NETWORK_SPEED_CONTROLLER = "com.android.systemui.statusbar.policy.NetworkSpeedController"
+    private const val NETWORK_SPEED_TICK = 200001
+    private const val NATIVE_NETWORK_SPEED_INTERVAL_MS = 4000L
+    private const val DETAILED_SPEED_SAMPLE = "customiuizer_detailed_speed_sample"
 
-    private var txBytesTotal = 0L
+    internal class NetSpeedTickAccess private constructor(
+        private val backgroundHandler: Field,
+        private val handlerOwner: Field,
+    ) {
+        val handlerType: Class<*> get() = backgroundHandler.type
 
-    private var rxBytesTotal = 0L
+        fun controller(handler: Any): Any? {
+            val owner = handlerOwner.get(handler) ?: return null
+            return owner.takeIf { backgroundHandler.get(it) === handler }
+        }
 
-    private var txSpeed = 0L
+        companion object {
+            fun resolve(controller: Class<*>): NetSpeedTickAccess? {
+                val handler = XposedHelpers.findFieldIfExists(controller, "mBgHandler") ?: return null
+                val owner = XposedHelpers.findFieldIfExists(handler.type, "this\$0") ?: return null
+                return NetSpeedTickAccess(handler, owner)
+            }
+        }
+    }
 
-    private var rxSpeed = 0L
+    private class DetailedSpeedSample {
+        // The native background Handler writes the sample; the display path reads one pair.
+        var measureTime = 0L
+        @Volatile var delta: NetSpeedDelta? = null
+    }
 
-    private var sampledTxBytes = -1L
-
-    private var sampledRxBytes = -1L
-
-    private fun sampleTrafficBytes() {
+    private fun sampleTrafficDelta(previous: NetSpeedDelta?, elapsedNanos: Long): NetSpeedDelta {
         var tx = 0L
         var rx = 0L
         var sampled = false
@@ -1879,6 +1924,7 @@ object SystemUIStatusBarHooks {
                 }
             }
         } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
             sampled = false
         }
@@ -1890,8 +1936,7 @@ object SystemUIStatusBarHooks {
             rx = TrafficStats.getTotalRxBytes()
         }
 
-        sampledTxBytes = tx
-        sampledRxBytes = rx
+        return computeNetSpeedDelta(tx, rx, previous?.txTotal ?: 0L, previous?.rxTotal ?: 0L, elapsedNanos)
     }
 
     /** Result of turning one traffic sample into a speed plus the next baseline. */
@@ -1954,6 +1999,7 @@ object SystemUIStatusBarHooks {
             val number = formatNetSpeedValue(f)
             return StringBuilder().append(number).append(pre).append(unitSuffix).toString()
         } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
             return ""
         }
@@ -2004,65 +2050,83 @@ object SystemUIStatusBarHooks {
 
     @JvmStatic
     fun DetailedNetSpeedHook(lpparam: PackageReadyParam) {
-        // Ensure the shared B1/B2 runtime-state holder exists. B2 only adds the detailed-format
-        // substate; if B1 is installed later the same observer and owner are reused.
         ensureNetSpeedRuntimeState().ensureDetailedState()
 
-        val NetworkSpeedController = XposedHelpers.findClassIfExists("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.classLoader)
-        if (NetworkSpeedController == null) {
-            XposedHelpers.log("DetailedNetSpeedHook", "No NetworkSpeed view or controller")
+        val controller = XposedHelpers.findClassIfExists(NETWORK_SPEED_CONTROLLER, lpparam.classLoader) ?: return
+        val tick = NetSpeedTickAccess.resolve(controller) ?: return
+        val context = XposedHelpers.findField(controller, "mContext")
+        val nativeState = XposedHelpers.findField(controller, "mNetworkSpeedState")
+        val visible = XposedHelpers.findField(nativeState.type, "visible")
+        val lastNativeTime = XposedHelpers.findField(controller, "mLastTime")
+        val emptyText = XposedHelpers.findField(controller, "EMPTY")
+
+        val sampleHook = ModuleHelper.findAndHookMethod(tick.handlerType, "handleMessage", Message::class.java, object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                if ((callback.getArg(0) as Message).what != NETWORK_SPEED_TICK) return
+                val handler = callback.getThisObject() ?: return
+                val owner = tick.controller(handler) ?: return
+                if (!visible.getBoolean(nativeState.get(owner))) {
+                    // Minimalism mode can leave the stock tick running while the icon is hidden.
+                    detailedSpeedSample(owner)?.delta = null
+                    return
+                }
+                val hostContext = context.get(owner) as Context
+                sampleDetailedNetSpeed(owner, hostContext, lastNativeTime.getLong(owner) == 0L)
+            }
+        }) ?: return
+
+        val formatHook = ModuleHelper.findAndHookMethod(
+            controller, "updateText", Array<String>::class.java,
+            createDetailedNetSpeedTextHook(emptyText, nativeState, visible) { owner ->
+                val hostContext = context.get(owner) as Context
+                val sample = detailedSpeedSample(owner)?.delta
+                formatDetailedNetSpeedText(
+                    sample?.txSpeed ?: 0L, sample?.rxSpeed ?: 0L,
+                    currentOrBuildDetailedNetSpeedFormatSnapshot(), ModuleHelper.getModuleRes(hostContext),
+                )
+            },
+        )
+        if (formatHook == null) ModuleHelper.guarded { sampleHook.unhook() }
+    }
+
+    internal fun createDetailedNetSpeedTextHook(
+        emptyText: Field,
+        nativeState: Field,
+        visible: Field,
+        format: (Any) -> Array<String?>,
+    ) = object : MethodHook() {
+        override fun before(callback: BeforeHookCallback) {
+            val owner = callback.getThisObject() ?: return
+            // updateVisibility passes its own EMPTY array when clearing the hidden icon.
+            if (callback.getArg(0) === emptyText.get(owner) || !visible.getBoolean(nativeState.get(owner))) return
+            callback.getArgs()[0] = format(owner)
+        }
+    }
+
+    private fun detailedSpeedSample(owner: Any): DetailedSpeedSample? =
+        XposedHelpers.getAdditionalInstanceField(owner, DETAILED_SPEED_SAMPLE) as? DetailedSpeedSample
+
+    private fun sampleDetailedNetSpeed(owner: Any, context: Context, nativeBaselineReset: Boolean) {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java) ?: return
+        val capabilities = connectivity.activeNetwork?.let(connectivity::getNetworkCapabilities)
+        val existing = detailedSpeedSample(owner)
+        if (capabilities == null ||
+            (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
+                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
+        ) {
+            existing?.delta = null
             return
         }
 
-        val mBgHandlerField = XposedHelpers.findField(NetworkSpeedController, "mBgHandler")
-        ModuleHelper.findAndHookMethod(mBgHandlerField.type, "handleMessage", Message::class.java, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val message = callback.getArg(0) as Message
-                if (message.what == 200001) {
-                    val thisObect = XposedHelpers.getSurroundingThis(callback.getThisObject())
-                    var isConnected = false
-                    val mContext = XposedHelpers.getObjectField(thisObect, "mContext") as Context
-                    val mConnectivityManager = mContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                    val nw = mConnectivityManager.activeNetwork
-                    if (nw != null) {
-                        val capabilities = mConnectivityManager.getNetworkCapabilities(nw)
-                        if (capabilities != null && (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))) {
-                            isConnected = true
-                        }
-                    }
-                    if (isConnected) {
-                        val nanoTime = java.lang.System.nanoTime()
-                        var newTime = nanoTime - measureTime
-                        measureTime = nanoTime
-                        if (newTime > 12_000_000_000L || newTime == 0L) newTime = 4_000_000_000L
-                        sampleTrafficBytes()
-                        val delta = computeNetSpeedDelta(
-                            sampledTxBytes,
-                            sampledRxBytes,
-                            txBytesTotal,
-                            rxBytesTotal,
-                            newTime,
-                        )
-                        txSpeed = delta.txSpeed
-                        rxSpeed = delta.rxSpeed
-                        txBytesTotal = delta.txTotal
-                        rxBytesTotal = delta.rxTotal
-                    } else {
-                        txSpeed = 0
-                        rxSpeed = 0
-                    }
-                }
-            }
-        })
-
-        ModuleHelper.hookAllMethods(NetworkSpeedController, "updateText", object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val context = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
-                val modRes = ModuleHelper.getModuleRes(context)
-                val snapshot = currentOrBuildDetailedNetSpeedFormatSnapshot()
-                callback.getArgs()[0] = formatDetailedNetSpeedText(txSpeed, rxSpeed, snapshot, modRes)
-            }
-        })
+        val state = existing ?: DetailedSpeedSample().also {
+            XposedHelpers.setAdditionalInstanceField(owner, DETAILED_SPEED_SAMPLE, it)
+        }
+        val time = java.lang.System.nanoTime()
+        val elapsed = time - state.measureTime
+        val previous = if (nativeBaselineReset) null else state.delta
+        val duration = if (elapsed in 1..12_000_000_000L) elapsed else 4_000_000_000L
+        state.delta = sampleTrafficDelta(previous, duration)
+        state.measureTime = time
     }
 
     internal class NetSpeedTypefaceState(var base: Typeface? = null, var target: Typeface? = null)
@@ -2376,54 +2440,20 @@ object SystemUIStatusBarHooks {
     /**
      * Applies the network-speed text style to [speedView].
      *
-     * The style is fully reversible: the original system-provided state is captured once per view
-     * and the full apply path derives the complete target state from [original] + [snapshot].
-     * Setters are applied in a single guarded block; if any setter throws a non-fatal exception the
-     * function returns without marking the snapshot as completed, so the next call with the same
-     * snapshot can retry.
-     *
-     * Callers:
-     * - `NetworkSpeedView.setNetworkSpeed` per tick: `typefaceOnly = false`.  This path short-circuits
-     *   when the last full-style [snapshot.id] has already been applied to this [speedView], so the
-     *   common per-second case performs zero full-style setters.
-     * - `NetworkSpeedView.onFinishInflate`: `typefaceOnly = false`.  Full style is applied once and
-     *   the view is marked as styled.
-     * - `TextView.setTextAppearance` after-hook: `typefaceOnly = true`.  After the framework or
-     *   `onFinishInflate` applies a text appearance, this only restores the network-speed typeface
-     *   and fake-bold state.  It also invalidates the cached original style and last full snapshot so
-     *   the next full apply re-captures the new baseline.
-     *
-     * Hot-path invariants:
-     * - No [MainModule.mPrefs] reads.
-     * - No reflection, resource-name searches, or temporary collections.
-     * - Logical configuration is converted to physical pixels on demand using the View's
-     *   current resources, so density/fontScale changes never use stale px values.
-     * - The last full [NetSpeedTextStyleSnapshot.id] is stored as an additional instance field on
-     *   [speedView]; when the same [snapshot] has already been fully applied, [typefaceOnly] = false
-     *   returns early and touches no setters.
+     * The native baseline is captured once per view. A failed apply leaves the snapshot
+     * incomplete so the next native update can retry. Steady text updates with the same
+     * snapshot return before reading the children or calling setters.
      */
-    internal fun applyNetSpeedTextStyle(speedView: LinearLayout, snapshot: NetSpeedTextStyleSnapshot, typefaceOnly: Boolean) {
+    internal fun applyNetSpeedTextStyle(speedView: LinearLayout, snapshot: NetSpeedTextStyleSnapshot) {
         if (speedView.tag as? String == "slot_text_icon") return
 
         val lastFullId = XposedHelpers.getAdditionalInstanceField(speedView, NETSPEED_LAST_FULL_STYLE_SNAPSHOT_ID) as? Long
-        if (!typefaceOnly && lastFullId == snapshot.id) {
-            // setNetworkSpeed per-second path: same view, same snapshot, full style already applied.
-            return
-        }
+        if (lastFullId == snapshot.id) return
 
         val numberText = getNetSpeedNumberView(speedView) ?: return
         val unitText = getNetSpeedUnitView(speedView)
-
         val speedStyle = snapshot.speedStyle
         val bold = snapshot.bold
-
-        if (typefaceOnly) {
-            ensureNetSpeedTypeface(numberText, bold)
-            if (speedStyle == 1) {
-                unitText?.let { ensureNetSpeedTypeface(it, bold) }
-            }
-            return
-        }
 
         // Guard: the original baseline cannot be captured before the framework has attached a real
         // LinearLayout.LayoutParams to the number view.  Creating a guessed LP here would poison
@@ -2583,11 +2613,11 @@ object SystemUIStatusBarHooks {
     private fun onNetworkSpeedValueSet(speedView: LinearLayout) {
         if (speedView.tag as? String == "slot_text_icon") return
         val snapshot = currentOrBuildNetSpeedTextStyleSnapshot()
-        applyNetSpeedTextStyle(speedView, snapshot, typefaceOnly = false)
+        applyNetSpeedTextStyle(speedView, snapshot)
     }
 
     /**
-     * Handles `TextView.setTextAppearance` for the network-speed number/unit TextViews.
+     * Reconciles the typeface after the native font/density update or the clock style is applied.
      *
      * Records the new base typeface, restores the network-speed typeface and fake-bold state,
      * and invalidates the cached full-style snapshot id on the parent.  The original style
@@ -2614,7 +2644,7 @@ object SystemUIStatusBarHooks {
     /**
      * Handles `NetworkSpeedView.onFinishInflate`. Creates the typeface state tags and either
      * applies the full custom style directly or first applies a system clock-style text appearance
-     * (whose after-hook then restores only the typeface).  In the useClockStyle path the full
+     * and reconciles the typeface. In the useClockStyle path the full
      * NetworkSpeed custom style is still applied afterwards, so the captured baseline is the
      * clock-styled appearance while the final visible state is the custom NetworkSpeed style.
      */
@@ -2639,11 +2669,27 @@ object SystemUIStatusBarHooks {
             val styleId = speedView.resources.getIdentifier("TextAppearance.StatusBar.Clock", "style", "com.android.systemui")
             if (styleId != 0) {
                 numberText.setTextAppearance(styleId)
-                if (snapshot.speedStyle == 1) unitText?.setTextAppearance(styleId)
+                onNetworkSpeedTextAppearanceChanged(numberText, speedView)
+                if (snapshot.speedStyle == 1 && unitText != null) {
+                    unitText.setTextAppearance(styleId)
+                    onNetworkSpeedTextAppearanceChanged(unitText, speedView)
+                }
             }
         }
 
-        applyNetSpeedTextStyle(speedView, snapshot, typefaceOnly = false)
+        applyNetSpeedTextStyle(speedView, snapshot)
+    }
+
+    internal fun onNetworkSpeedDensityChanged(speedView: LinearLayout) {
+        val state = netSpeedRuntimeState?.styleState ?: return
+        // The tagged children were prepared during inflation. Other NetworkSpeedView uses
+        // (including the synthetic status icons) have no style state to restore.
+        (speedView.getTag(state.numberViewTag) as? TextView)?.let {
+            onNetworkSpeedTextAppearanceChanged(it, speedView)
+        }
+        (speedView.getTag(state.unitViewTag) as? TextView)?.let {
+            onNetworkSpeedTextAppearanceChanged(it, speedView)
+        }
     }
 
     @JvmStatic
@@ -2652,21 +2698,24 @@ object SystemUIStatusBarHooks {
         // observer is bound to the module singleton and is registered only on first use.
         ensureNetSpeedRuntimeState().ensureStyleState()
 
-        ModuleHelper.hookAllMethods("android.widget.TextView", lpparam.classLoader, "setTextAppearance", object : MethodHook() {
+        val viewClass = "com.android.systemui.statusbar.views.NetworkSpeedView"
+        ModuleHelper.findAndHookMethod(viewClass, lpparam.classLoader, "onDensityOrFontScaleChanged", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                val textChild = callback.getThisObject() as? TextView ?: return
-                onNetworkSpeedTextAppearanceChanged(textChild)
+                if (callback.getThrowable() != null) return
+                val networkLayout = callback.getThisObject() as LinearLayout
+                onNetworkSpeedDensityChanged(networkLayout)
             }
         })
 
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.views.NetworkSpeedView", lpparam.classLoader, "setNetworkSpeed", object : MethodHook() {
+        ModuleHelper.findAndHookMethod(viewClass, lpparam.classLoader, "setNetworkSpeed",
+            String::class.java, String::class.java, object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 val networkLayout = callback.getThisObject() as? LinearLayout ?: return
                 onNetworkSpeedValueSet(networkLayout)
             }
         })
 
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.views.NetworkSpeedView", lpparam.classLoader, "onFinishInflate", object : MethodHook() {
+        ModuleHelper.findAndHookMethod(viewClass, lpparam.classLoader, "onFinishInflate", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 val networkLayout = callback.getThisObject() as? LinearLayout ?: return
                 onNetworkSpeedViewInflated(networkLayout)
@@ -2677,19 +2726,26 @@ object SystemUIStatusBarHooks {
     @JvmStatic
     fun NetSpeedIntervalHook(lpparam: PackageReadyParam) {
         ensureStatusBarLayoutRuntimeState()
-        val NetworkSpeedController = XposedHelpers.findClass("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.classLoader)
-        val mBgHandlerField = XposedHelpers.findField(NetworkSpeedController, "mBgHandler")
-        ModuleHelper.findAndHookMethod(mBgHandlerField.type, "handleMessage", Message::class.java, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val message = callback.getArg(0) as Message
-                if (message.what == 200001) {
-                    val mBgHandler = callback.getThisObject() as Handler
-                    mBgHandler.removeMessages(200001)
-                    val newInterval = currentOrBuildStatusBarLayoutSnapshot().netSpeedIntervalMs
-                    mBgHandler.sendEmptyMessageDelayed(200001, newInterval)
-                }
-            }
-        })
+        val controller = XposedHelpers.findClass(NETWORK_SPEED_CONTROLLER, lpparam.classLoader)
+        val tick = NetSpeedTickAccess.resolve(controller) ?: return
+        ModuleHelper.findAndHookMethod(
+            tick.handlerType, "handleMessage", Message::class.java,
+            createNetSpeedIntervalHook(tick) { currentOrBuildStatusBarLayoutSnapshot().netSpeedIntervalMs },
+        )
+    }
+
+    internal fun createNetSpeedIntervalHook(tick: NetSpeedTickAccess, intervalMs: () -> Long) = object : MethodHook() {
+        override fun after(callback: AfterHookCallback) {
+            if (callback.getThrowable() != null || (callback.getArg(0) as Message).what != NETWORK_SPEED_TICK) return
+            val delay = intervalMs()
+            if (delay <= 0L || delay == NATIVE_NETWORK_SPEED_INTERVAL_MS) return
+            val handler = callback.getThisObject() as Handler
+            if (tick.controller(handler) == null) return
+
+            // The native tick has already queued its successor.
+            handler.removeMessages(NETWORK_SPEED_TICK)
+            handler.sendEmptyMessageDelayed(NETWORK_SPEED_TICK, delay)
+        }
     }
 
     @JvmStatic
@@ -2719,7 +2775,7 @@ object SystemUIStatusBarHooks {
     @JvmStatic
     fun MobileTypeSingleHook(lpparam: PackageReadyParam) {
         ensureStatusBarLayoutRuntimeState()
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateMobileTypeLayout", HookerClassHelper.DO_NOTHING)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateMobileTypeLayout", MOBILE_ICON_STATE_CLASS, HookerClassHelper.DO_NOTHING)
         val stateHook = object : MethodHook(XposedInterface.PRIORITY_HIGHEST) {
             private var initAction = false
 
@@ -2743,8 +2799,8 @@ object SystemUIStatusBarHooks {
                 }
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateHook)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", stateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, stateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateState", MOBILE_ICON_STATE_CLASS, stateHook)
 
         val initHook = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
@@ -2936,8 +2992,8 @@ object SystemUIStatusBarHooks {
                 effect.before(callback)
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateHook)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", stateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, stateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateState", MOBILE_ICON_STATE_CLASS, stateHook)
     }
 
     @JvmStatic
@@ -3074,8 +3130,8 @@ object SystemUIStatusBarHooks {
                 }
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", hideMobileActivity)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", hideMobileActivity)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, hideMobileActivity)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateState", MOBILE_ICON_STATE_CLASS, hideMobileActivity)
     }
 
     private fun optionalMobileIcon(type: Class<*>, name: String): java.lang.reflect.Field? =

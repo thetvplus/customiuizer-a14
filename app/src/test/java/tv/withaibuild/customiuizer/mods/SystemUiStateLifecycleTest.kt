@@ -14,6 +14,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.android.systemui.controlcenter.phone.ControlPanelWindowManager
+import com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import java.lang.reflect.Executable
@@ -76,25 +77,82 @@ class SystemUiStateLifecycleTest {
     fun swappedShadeRoutingUsesTheOriginalTouchSideForTheEntireGesture() {
         SystemUIControlCenterHooks.SwitchCCAndNotificationHook(ready)
         val manager = ControlPanelWindowManager()
-        val (member, hook) = installed("dispatchToControlPanel")
-        fun dispatch(action: Int, x: Float): Boolean {
+        val bar = MiuiPhoneStatusBarView(context).apply { layout(0, 0, 200, 40) }
+        val (dispatchMember, dispatchHook) = installed("dispatchToControlPanel")
+        val (barMember, barHook) = installed("handleEvent")
+        fun dispatch(event: MotionEvent, width: Float): Boolean =
+            dispatchHook.intercept(proxy(XposedInterface.Chain::class.java) { name, args ->
+                when (name) {
+                    "getExecutable" -> dispatchMember
+                    "getThisObject" -> manager
+                    "getArg" -> if (args!![0] == 0) event else width
+                    "proceed" -> error("Native right-side dispatch must be replaced when swapping sides")
+                    else -> error(name)
+                }
+            }) as Boolean
+        bar.dispatchToControlPanel = { event, width -> dispatch(event, width) }
+        fun handle(action: Int, x: Float): Boolean {
             val event = MotionEvent.obtain(0, 0, action, x, 5f, 0)
             return try {
-                val callback = before(member, manager, arrayOf(event, 200f))
-                hook.beforeHook(callback)
-                assertTrue(callback.skipped)
-                callback.result as Boolean
+                barHook.intercept(proxy(XposedInterface.Chain::class.java) { name, args ->
+                    when (name) {
+                        "getExecutable" -> barMember
+                        "getThisObject" -> bar
+                        "getArg" -> event
+                        "proceed" -> {
+                            assertNull(args)
+                            bar.handleEvent(event)
+                        }
+                        else -> error(name)
+                    }
+                }) as Boolean
             } finally { event.recycle() }
         }
-        assertTrue(dispatch(MotionEvent.ACTION_DOWN, 30f))
+        assertTrue(handle(MotionEvent.ACTION_DOWN, 30f))
         assertEquals(30f, manager.downX, 0f)
-        assertTrue(dispatch(MotionEvent.ACTION_MOVE, 170f))
-        assertEquals(2, manager.windowView!!.dispatches)
-        assertFalse(dispatch(MotionEvent.ACTION_DOWN, 170f))
-        assertFalse(dispatch(MotionEvent.ACTION_MOVE, 30f))
-        assertEquals(2, manager.windowView!!.dispatches)
+        assertTrue(handle(MotionEvent.ACTION_MOVE, 170f))
+        assertTrue(handle(MotionEvent.ACTION_CANCEL, 170f))
+        assertFalse(bar.mMotionToControlCenter)
+        assertFalse(handle(MotionEvent.ACTION_DOWN, 170f))
+        assertFalse(handle(MotionEvent.ACTION_MOVE, 30f))
+        assertFalse(handle(MotionEvent.ACTION_UP, 30f))
+        assertEquals(3, manager.windowView!!.dispatches)
+        bar.mUseControlCenter = false
+        assertFalse(handle(MotionEvent.ACTION_DOWN, 30f))
+        val window = requireNotNull(manager.windowView)
+        assertEquals(3, window.dispatches)
+        assertEquals(7, bar.nativeEvents)
+        bar.mUseControlCenter = true
+
+        fun assertShadeReceivesGesture(reason: String) {
+            val before = bar.nativeEvents
+            assertFalse(reason, handle(MotionEvent.ACTION_DOWN, 30f))
+            assertFalse(bar.mMotionToControlCenter)
+            assertFalse(handle(MotionEvent.ACTION_MOVE, 170f))
+            assertFalse(handle(MotionEvent.ACTION_UP, 170f))
+            assertEquals(before + 3, bar.nativeEvents)
+        }
+
+        manager.added = false
+        assertShadeReceivesGesture("Window not added")
+        assertEquals(3, window.dispatches)
+        manager.added = true
+        window.acceptsMotion = false
+        assertShadeReceivesGesture("Plugin declines the down event")
+        assertEquals(4, window.dispatches)
         manager.windowView = null
-        assertFalse(dispatch(MotionEvent.ACTION_DOWN, 30f))
+        assertShadeReceivesGesture("Plugin window unavailable")
+        val down = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 30f, 5f, 0)
+        try {
+            assertFalse(dispatch(down, 200f))
+        } finally { down.recycle() }
+
+        manager.windowView = window
+        window.acceptsMotion = true
+        assertTrue(handle(MotionEvent.ACTION_DOWN, 30f))
+        assertTrue(handle(MotionEvent.ACTION_UP, 170f))
+        assertFalse(bar.mMotionToControlCenter)
+        assertEquals(6, window.dispatches)
     }
 
     @Test

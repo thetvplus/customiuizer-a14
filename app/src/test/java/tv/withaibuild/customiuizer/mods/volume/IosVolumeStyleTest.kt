@@ -602,7 +602,14 @@ class IosVolumeStyleTest {
         ShadowChoreographer.setPaused(true)
         try {
             for (endpoint in listOf(0,15)) {
-                val root = FrameLayout(host); val slider = SeekBar(host); val fill = View(host)
+                val root = object : FrameLayout(host) {
+                    var releasePosts = 0
+                    override fun postDelayed(action: Runnable, delayMillis: Long): Boolean {
+                        if (delayMillis == 600L) releasePosts++
+                        return super.postDelayed(action, delayMillis)
+                    }
+                }
+                val slider = SeekBar(host); val fill = View(host)
                 val track = FrameLayout(host); val icon = ImageView(host)
                 for (v in listOf(slider,fill,track,icon)) root.addView(v,FrameLayout.LayoutParams(58,170))
                 host.setContentView(root)
@@ -611,6 +618,7 @@ class IosVolumeStyleTest {
                 val paint = getField<IosVolumeStyle.Track>(binding,"paint")
                 binding.nativeVolume(endpoint,0,15); binding.noteInput()
                 shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+                assertEquals(1, root.releasePosts)
                 val clock = getField<ValueAnimator>(paint,"clock")
                 clock.currentPlayTime = 65L
                 val scale = getField<Float>(paint,"pressScale")
@@ -620,6 +628,7 @@ class IosVolumeStyleTest {
                 clock.end(); assertEquals(0f,getField<Float>(paint,"stretch"),0f)
                 binding.noteInput(); binding.nativeVolume(if(endpoint==15) 14 else 1,0,15)
                 shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+                assertEquals(1, root.releasePosts)
                 assertEquals("Moving away from an endpoint must not kick it",0f,getField<Float>(paint,"stretch"),0f)
                 binding.close()
                 assertTrue(root.clipChildren); assertTrue(track.clipToOutline)

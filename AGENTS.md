@@ -10,7 +10,7 @@
 - 对已授权、范围明确的工作自主执行，修复同根因、同调用链的相关缺陷；越权、破坏性操作或无法判断的重大风险才询问。不扩展为无关重构。
 - 优先取消无效工作、复用已有对象与结果、增量更新。缓存、抽象、监听器和异常防御须对应真实需求；不为形式整洁重写成熟实现。
 - **iOS 复刻先查本地逆向**：指定版本的索引、原生调用链、派生实现及资源是依据，公开资料只补缺口。未知项明确标注，不把参考版本当作 A14 合同。
-- 验证选择、可信证据复用和停止条件只见 [TESTING](docs/TESTING.md#执行分级)。目标完成、完整 diff 已审、必要检查通过即收口；缺失验收标为待验，不重复全量测试或来源核验。
+- 按 [TESTING](docs/TESTING.md#执行分级)选测和复用证据。目标完成、完整 diff 已审、必要检查通过即收口；缺失验收标为待验。
 
 ## 产品与取舍
 
@@ -22,14 +22,15 @@
 
 ## Git 与协作
 
-- `master` 是唯一长期稳定版本线。未完成成果留在任务分支，已验证成果通过 Squash PR 整合。正式版以 1–2 个主线提交为目标，集成范围、标题与例外见 [主线提交与发行节奏](docs/DEVELOPMENT.md#主线提交与发行节奏)。
+- 源码仓的长期主线是 `master`，下载仓使用自己的 `main`。任务成果经 Squash PR 整合，提交节奏见 [DEVELOPMENT](docs/DEVELOPMENT.md#主线提交与发行节奏)。
 - 续接沿用当前聊天的分支、Worktree、授权及证据。首次写入、任务切换或发生冲突时，[核对任务归属](docs/DEVELOPMENT.md#git-与协作)。
 - 授权开发任务完成必要验证后，默认 commit / push 对应工作分支，无需再次确认；推送后读回远端完整 SHA。该授权不包含 merge master、tag 或 Release，用户指定的只读 / 停止点优先。
-- 禁止 force push、破坏性 reset、改写公开历史、无差别 clean 或覆盖未知修改。Review 不建平行分支；同一 Worktree 只有一个写入者，冲突范围先协调。远端不可用时报告协作状态未知。
+- 禁止 force push、破坏性 reset、改写公开历史、无差别 clean 或覆盖未知修改。指定 diff 的只读审查沿用原引用，不建分支。同一 Worktree 只有一个写入者，冲突范围先协调。远端不可用时报告协作状态未知。
+- 获授权清理仓库时，分支核对 [Git 与协作](docs/DEVELOPMENT.md#git-与协作)，Actions 运行与产物核对 [RELEASE](docs/RELEASE.md#actions产物与证明清理)。
 
 ## 验证、发布与证据
 
-- 普通任务从 **Quick** 开始，按影响选择 **Standard / Deep**；正式准备、签名与发布走 **Release**。命令和收口条件只见 [TESTING](docs/TESTING.md#执行分级)，不删测试、降断言或吞异常制造通过。
+- 普通任务从 **Quick** 开始，按影响选择 **Standard / Deep**。保留现有测试及其能检出的失败。
 - 构建固定 JDK 27；需要构建或排障时才查[环境](docs/DEVELOPMENT.md#环境)，不因工具不支持而降级。APK / R8、ROM 静态和实机证据分别报告。
 - Debug / Develop 不冒充正式版。正式来源、历史签名、原候选恢复及双仓门禁只见 [RELEASE](docs/RELEASE.md)，验证分级不放宽这些要求。
 - APK、密钥、密码、签名配置、ROM、DEX、trace、mapping、日志和 profiler 数据不入库。公开提交、Issue / PR 与文档只写抽象问题和必要结论，不披露个人账号、本机路径、凭据、网络 / 会话 / 设备标识、个人应用名单或操作记录；公开兼容接口及必要来源归属可保留。
@@ -45,5 +46,5 @@
 | 构建环境 / 生成设置或矩阵 | [环境](docs/DEVELOPMENT.md#环境) / [构建与生成物](docs/DEVELOPMENT.md#构建与生成物) |
 | 选测 / 真机行为与 Hook 取证 | [执行分级](docs/TESTING.md#执行分级) / [设备入口](docs/AGENTIC_VERIFICATION.md#设备入口) |
 | Issue 收口 | [核对完成条件与验收证据](docs/DEVELOPMENT.md#issue-收口) |
-| 实施 / 只读审查 / 专项工具 | [项目 Skills](.agents/skills/README.md) |
+| 实施变更、指定 diff 的只读审查或专项工具 | [项目 Skills](.agents/skills/README.md) |
 | 文档职责、更新与删除 | [DOCS_STYLE](docs/DOCS_STYLE.md)；总目录只维护在 [docs/README](docs/README.md) |

@@ -116,6 +116,12 @@ python tools/rom_catalog.py benchmark string 'SystemUIService' --rom fuxi-cn --c
 R8 会合并类或内联安装方法。类映射只说明输出容器，还需匹配方法 / 行号映射才能归属原安装器；
 不要仅凭反混淆类名判断 Hook 属于哪个功能。
 
+## 资源表复核
+
+先用 DexSQL 查资源字段与使用方所在的 APK，再对同一输入运行 `aapt2 dump resources` 核对资源类型、ID 与配置，必要时用 `aapt2 dump xmltree --file <入口>` 检查布局或 Manifest。控制中心的页眉和磁贴使用插件的资源表，音量计时器也从插件读取当前尺寸。ROM 契约扫描器通过 `--target plugin=<Smali目录>` 接收插件输入，其目标进程为 `com.android.systemui`。
+
+对模块 Develop APK 先检查内嵌构建版本，再核对生成设置索引、按名称读取的 drawable 和当前变体的资源。两个 APK 有可比来源时，用 `tools/apk_semantic_diff.py` 对照归档条目和 `resources.arsc`。具体查询见 [DexSQL 查询集](../../tools/dexsql/README.md)。
+
 ## 安装与接入
 
 使用 [官方发布](https://github.com/LSPosed/dexsql-release/releases) 中与主机匹配的可执行文件，

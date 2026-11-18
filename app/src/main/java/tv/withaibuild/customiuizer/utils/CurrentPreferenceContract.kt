@@ -138,7 +138,7 @@ internal object CurrentPreferenceContract {
      * One-shot upgrade-path cleanup of orphan keys. Skips when [CONTRACT_REVISION]
      * is already durable. Must not run on SystemUI or other hook hot paths.
      *
-     * @return true if a commit was attempted (revision was stale).
+     * @return true if a cleanup was committed to storage.
      */
     fun pruneOrphanPreferences(prefs: SharedPreferences): Boolean {
         // Narrow retirement even for users whose general contract migration is complete.
@@ -179,8 +179,7 @@ internal object CurrentPreferenceContract {
         editor.clear()
         BackupRestore.putSupportedPreferenceEntries(editor, kept)
         editor.putInt(CONTRACT_REVISION_KEY, CONTRACT_REVISION)
-        editor.commit()
-        return true
+        return editor.commit()
     }
 
     private fun isCatalogKey(key: String): Boolean {

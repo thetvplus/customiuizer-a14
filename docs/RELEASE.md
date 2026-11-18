@@ -41,6 +41,10 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 ### 当前正式版本
 
+正式版本、APK 及对应的构建元数据以两仓的 Latest 为准。[源码仓 Latest](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [下载仓 Latest](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/latest)
+
+#### r14.27.9 阶段基线
+
 **r14.27.9 / 310** 的正式源码为 `9224160f6b13be43a9dd4a6da8a1ff92a0e795c0`。两仓 APK 均为 6,293,117 字节，SHA-256 为 `d2bd1f64612eb2d5b4184a8ee87907cadd902631a6767520b725cf8efc138bfa`，构建 metadata 摘要一致。[源码仓发行](https://github.com/thetvplus/customiuizer-a14/releases/tag/r14.27.9) · [下载仓发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/tag/310-r14.27.9)
 
 r14.27.9 是当前阶段基线。公开说明呈现本阶段仍有效的功能与升级方式，后续版本从 r14.27.9 开始核对变更和版本递增。退役版本的原始发行记录和资产按阶段收口规则归档。当前公开说明见[中文更新记录](../CHANGELOG.md)与[英文更新记录](../CHANGELOG_EN.md)。
@@ -82,10 +86,11 @@ gh workflow run a14-signed-build.yml --ref master -f destination=actions-only
 - 校验“说明基线 → 当前稳定安全基线 → 最终候选”的 Git 祖先关系，并查看说明基线到候选 exact SHA 的完整 diff。双语 `自 … 起的变更 / Changes since …` 使用说明基线。
 - 阶段总结从正式源码核对仍有效的能力。下一阶段使用当前正式标签作为起点。旧版对照需要原始记录时查发行标签或私有归档。
 
-日常维护 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”。用户内容与工程记录分别放在 `用户变化 / User changes`、`工程说明 / Engineering notes`。准备时使用 `prepare_release.py --dry-run` 预览，再检查版本一致性。
+日常维护 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”。用户内容与工程记录分别放在 `用户变化 / User changes`、`工程说明 / Engineering notes`。准备时使用 `prepare_release.py --dry-run` 预览。升版时同步更新 `release-policy.json` 和 `FormalTargetAndNotesTest` 的正式目标，再检查版本一致性。
 
 ```sh
 python tools/check_release_metadata.py
+python -m unittest tools.tests.test_signed_release.FormalTargetAndNotesTest
 ```
 
 准备工具先验证全部输入，再统一更新 Gradle、双语 README 和双语 Changelog。版本按发布策略递增。整理已发行系列时，`--notes-base` 指定累计基线并保留历史节。`--supersede / --base-version` 仅供旧版源码整理，作为独立模式使用。
@@ -109,7 +114,7 @@ Release Notes 优先使用候选 exact source SHA 中独立撰写的双语「发
 | Release 标题 | `<versionName>` |
 | APK | `CustoMIUIzer-A14-<versionName>.apk`，两仓完全同一二进制 |
 | 其他公开附件 | `build-metadata.json` |
-| 内部候选 | `a14-signed-<run-id>-<attempt>`，保留 30 天 |
+| 内部候选 | `a14-signed-<run-id>-<attempt>`，请求保留 30 天，实际期限以 Artifact 的 `expires_at` 为准 |
 
 APK 检查 applicationId、版本、SDK 34、arm64-v8a、不可调试、16 KB zipalign、V2 签名、历史证书及内嵌 sourceCommit。metadata 记录 APK 名称 / SHA-256 / 大小、平台身份、构建检查、完整 source SHA、仓库 / ref / workflow / run / attempt 及链接、UTC 记录时间和两项公开资产契约；不再生成 Attestation 字段。
 
@@ -143,9 +148,9 @@ gh workflow run a14-promote-release.yml --ref master -f destination=docs-only -f
 
 清理先盘点并固定具体 ID，写入前重新查询活动状态和引用，删除后重新查询实际结果。使用已有 `gh` 与官方 API，不添加常驻清理服务，也不给正常发布作业增添删除权限。
 
-必须保留当前运行、其他 Agent 的活跃构建证据、当前 exact master CI、有效设备验收 CI、实际正式发行仍引用的构建及可恢复候选。恢复完成前保留原运行、attempt、Artifact、metadata、对应 CI 和恢复运行。不得按“失败”或“时间较旧”一刀切删除。
+保留活动运行、开放 PR 与进行中任务的证据、当前 exact master CI、文档仍引用的运行、有效设备验收 CI，以及当前 CodeQL 和依赖图的成功基线。按两仓 Release Notes 与公开 metadata 核对正式来源，保留签名 run / attempt、对应 exact CI、可恢复 Artifact 和相关恢复运行。签名运行最终失败时也可能已有可恢复候选。
 
-只有正式双仓完成核验后，或候选已明确撤回且无恢复依赖时，才按授权清理失去价值的临时候选、重复 / 失效 / 无诊断价值的运行及关联产物和日志。当前运行不能自删；需要时在后续维护执行。正式 APK、签名身份、SHA-256、必要构建来源元数据和有效 Git 历史始终保留。
+双仓发行完成核验或候选确认撤回后，按授权清理已替代、无引用及无恢复用途的历史运行。删除 run 会一并删除附件与日志，先检查附件并把仍需留存的记录归档到仓库外，再逐项删除并读回。正式 APK、签名身份、SHA-256、必要构建来源元数据和有效 Git 历史始终保留。
 
 本仓既有 GitHub Attestations 使用官方用户级 [批量查询与删除 API](https://docs.github.com/en/rest/users/attestations) 清理：先枚举本仓证明及主体摘要，批量查询确认每条 repository_id 都属于本仓，防止相同摘要命中其他仓库，再申请删除并重新查询；权限不足明确报告，不能以请求退出成功替代读回。公开历史 Notes 只移除失效证明链接 / 验证命令，不篡改旧功能、源码、证书或 APK。仓库外证据可保存清理前身份与必要记录。
 

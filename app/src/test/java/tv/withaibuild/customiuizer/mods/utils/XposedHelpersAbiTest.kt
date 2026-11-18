@@ -157,7 +157,7 @@ class XposedHelpersAbiTest {
     @Test
     fun weakIdentityKeyIsClearedByGc() {
         val value = "secret"
-        var key: Any? = Object()
+        var key: Any? = Any()
         val ref = WeakReference(key)
 
         XposedHelpers.setAdditionalInstanceField(key!!, "gc-test", value)
@@ -171,7 +171,7 @@ class XposedHelpersAbiTest {
         assertNull(ref.get())
 
         // Expunge stale entries so the map does not grow unboundedly.
-        XposedHelpers.setAdditionalInstanceField(Object(), "other", "x")
+        XposedHelpers.setAdditionalInstanceField(Any(), "other", "x")
     }
 
     @Test
