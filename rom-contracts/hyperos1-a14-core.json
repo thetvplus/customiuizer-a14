@@ -12,7 +12,7 @@
     "totalInThisFile": 18,
     "notes": [
       "Counts describe target entries (classes), not individual methods or verified ROM support.",
-      "All 15 required entries have a full smali descriptor that can be derived from the source call: onFinishInflate()V, a concrete init(Z)V, setVisibility(I)V and the standard onClick(Landroid/view/View;)V callback.",
+      "All 15 required entries have complete member descriptors. The control center tile is defined in the plugin APK and runs in the SystemUI process.",
       "Optional entries are kept when the return type or the exact parameter list could not be confirmed from the repository alone; they must be verified against a real ROM before being promoted to required.",
       "Framework class android/app/Application is a system framework class; it is not part of the Launcher APK and is therefore in an independent framework target even though the hook is installed from com.miui.home.",
       "WallpaperManagerService is a system_server service; the hook is already invoked from MainModule.onSystemServerStarting via SystemLockScreenHooks.SetLockscreenWallpaperHook(SystemServerStartingParam)."
@@ -126,13 +126,15 @@
       ]
     },
     {
-      "target": "systemui",
+      "target": "plugin",
       "class": "Lmiui/systemui/controlcenter/qs/tileview/QSTileItemView;",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt",
-      "sourceHookFunction": "SystemCCGridHookLoader",
+      "sourceHookFunction": "hookGridTileSizing",
       "targetProcessPackage": "com.android.systemui",
       "methods": [
-        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "QS tile item view setup." }
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "QS tile item view setup." },
+        { "name": "updateSize", "descriptor": "()V", "required": true, "description": "Native icon frame sizing." },
+        { "name": "updateContainerHeight", "descriptor": "()V", "required": true, "description": "Native expandable tile height." }
       ]
     },
     {

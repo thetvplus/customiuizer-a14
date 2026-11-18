@@ -149,6 +149,7 @@ r14.27.9 的 309 试用包经受控重建确认 SystemUI 加载 API 102。离线
 - 四份 ROM 的控制中心亮度提示使用 `MiuiBrightnessController.onStart(int)`、`onChanged(ToggleSliderBase, boolean, boolean, int, boolean)` 和 `onStop(int)`。起始数值由原生回调直接提供，安装时读取 Gamma 上限，整数百分比相同时跳过格式化与写入。移除在原生绑定对象上找不到监听器字段的兼容分支。音量进度按两版插件的确切签名安装，非当前窗口及程序更新省去无用的拖动参数读取，实时 Insets 与已有布局事件继续控制位置。
 - 两版音量插件的横竖屏计时器都在 `MiuiVolumeTimerDrawableHelper.initTimerString()` 后、首次绘制前取得对应的时长和标签。模块在此复用原生 `setTimeSegments(int[])` 发布 11 档，每个实例保留独立数组和原生关闭标签。移除全局资源替换，同语言复用时长文本。拖动位置在安装时解析字段和边距资源 ID，按当前配置读取原生宽度和边距。
 - 四份 ROM 的 `StatusBarMobileView.onDarkChanged()` 均在写完原生图标和着色状态后进入 `applyDarknessInternal()`，双卡图标在该公共入口完成整组更新。双排图标与双排数字在 `setMobileIcons()` 就地更新状态，原生继续消费同一参数列表，图标资源名称解析延至首次双卡更新。原生判断主卡状态相等而跳过绘制时，`applyMobileState()` 返回后按 View 已呈现的副卡档位增量更新下排，原生已绘制或档位相同时跳过。档位只由当前 View 的 tag 持有。非双卡列表以及原生 `setSubs()` 移除旧图标后的非双卡状态清除配对，新建单卡图标沿用原生。副卡独立变更、单双卡切换、圆点样式组合及亮暗切换待插卡实机复验。
+- 重新构建 `1c33ef4b` 的 Develop APK，内嵌版本与 Git 一致。与上一份本地 Develop APK 对照，资源表、打包资源及 Manifest 内容相同。APK 的 994 个设置索引 XML 元素与生成结果一致，96 个双卡图标名称齐全。两版插件中的页眉和磁贴资源字段均可在 AAPT2 资源表定位对应名称，计时器尺寸 ID 随版本变化。四份 ROM 的 SystemUI 网速和信号名均可定位，MiuiHome 与 POCO 的 `icon_title` 位于各自的资源包。核心合同将磁贴归入 `plugin`，补齐两个尺寸回调，联合复核入口见 [DexSQL 资源表复核](../rom-intelligence/DEXSQL.md#资源表复核)。
 - 当前候选的 SystemUI 实装、主题与字体重载、第二行网速、控制中心左右分流、自定义磁贴尺寸、面板分栏与动画、步数刷新、亮度与音量百分比提示、音量计时器、音量按键回弹和宿主性能仍待对应 ROM 实机验收。静态签名通过只覆盖四份离线样本。
 
 ### Launcher 原生入口维护
