@@ -53,6 +53,7 @@ import tv.withaibuild.customiuizer.utils.Helpers
 import tv.withaibuild.customiuizer.utils.HookUtils
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.ref.WeakReference
+import java.lang.reflect.Field
 import java.net.NetworkInterface
 import java.util.ArrayList
 import java.util.HashSet
@@ -1851,21 +1852,38 @@ object SystemUIStatusBarHooks {
         }
     }
 
-    private var measureTime = 0L
+    private const val NETWORK_SPEED_CONTROLLER = "com.android.systemui.statusbar.policy.NetworkSpeedController"
+    private const val NETWORK_SPEED_TICK = 200001
+    private const val NATIVE_NETWORK_SPEED_INTERVAL_MS = 4000L
+    private const val DETAILED_SPEED_SAMPLE = "customiuizer_detailed_speed_sample"
 
-    private var txBytesTotal = 0L
+    internal class NetSpeedTickAccess private constructor(
+        private val backgroundHandler: Field,
+        private val handlerOwner: Field,
+    ) {
+        val handlerType: Class<*> get() = backgroundHandler.type
 
-    private var rxBytesTotal = 0L
+        fun controller(handler: Any): Any? {
+            val owner = handlerOwner.get(handler) ?: return null
+            return owner.takeIf { backgroundHandler.get(it) === handler }
+        }
 
-    private var txSpeed = 0L
+        companion object {
+            fun resolve(controller: Class<*>): NetSpeedTickAccess? {
+                val handler = XposedHelpers.findFieldIfExists(controller, "mBgHandler") ?: return null
+                val owner = XposedHelpers.findFieldIfExists(handler.type, "this\$0") ?: return null
+                return NetSpeedTickAccess(handler, owner)
+            }
+        }
+    }
 
-    private var rxSpeed = 0L
+    private class DetailedSpeedSample {
+        // The native background Handler writes the sample; the display path reads one pair.
+        var measureTime = 0L
+        @Volatile var delta: NetSpeedDelta? = null
+    }
 
-    private var sampledTxBytes = -1L
-
-    private var sampledRxBytes = -1L
-
-    private fun sampleTrafficBytes() {
+    private fun sampleTrafficDelta(previous: NetSpeedDelta?, elapsedNanos: Long): NetSpeedDelta {
         var tx = 0L
         var rx = 0L
         var sampled = false
@@ -1886,6 +1904,7 @@ object SystemUIStatusBarHooks {
                 }
             }
         } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
             sampled = false
         }
@@ -1897,8 +1916,7 @@ object SystemUIStatusBarHooks {
             rx = TrafficStats.getTotalRxBytes()
         }
 
-        sampledTxBytes = tx
-        sampledRxBytes = rx
+        return computeNetSpeedDelta(tx, rx, previous?.txTotal ?: 0L, previous?.rxTotal ?: 0L, elapsedNanos)
     }
 
     /** Result of turning one traffic sample into a speed plus the next baseline. */
@@ -1961,6 +1979,7 @@ object SystemUIStatusBarHooks {
             val number = formatNetSpeedValue(f)
             return StringBuilder().append(number).append(pre).append(unitSuffix).toString()
         } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
             return ""
         }
@@ -2011,65 +2030,83 @@ object SystemUIStatusBarHooks {
 
     @JvmStatic
     fun DetailedNetSpeedHook(lpparam: PackageReadyParam) {
-        // Ensure the shared B1/B2 runtime-state holder exists. B2 only adds the detailed-format
-        // substate; if B1 is installed later the same observer and owner are reused.
         ensureNetSpeedRuntimeState().ensureDetailedState()
 
-        val NetworkSpeedController = XposedHelpers.findClassIfExists("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.classLoader)
-        if (NetworkSpeedController == null) {
-            XposedHelpers.log("DetailedNetSpeedHook", "No NetworkSpeed view or controller")
+        val controller = XposedHelpers.findClassIfExists(NETWORK_SPEED_CONTROLLER, lpparam.classLoader) ?: return
+        val tick = NetSpeedTickAccess.resolve(controller) ?: return
+        val context = XposedHelpers.findField(controller, "mContext")
+        val nativeState = XposedHelpers.findField(controller, "mNetworkSpeedState")
+        val visible = XposedHelpers.findField(nativeState.type, "visible")
+        val lastNativeTime = XposedHelpers.findField(controller, "mLastTime")
+        val emptyText = XposedHelpers.findField(controller, "EMPTY")
+
+        val sampleHook = ModuleHelper.findAndHookMethod(tick.handlerType, "handleMessage", Message::class.java, object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                if ((callback.getArg(0) as Message).what != NETWORK_SPEED_TICK) return
+                val handler = callback.getThisObject() ?: return
+                val owner = tick.controller(handler) ?: return
+                if (!visible.getBoolean(nativeState.get(owner))) {
+                    // Minimalism mode can leave the stock tick running while the icon is hidden.
+                    detailedSpeedSample(owner)?.delta = null
+                    return
+                }
+                val hostContext = context.get(owner) as Context
+                sampleDetailedNetSpeed(owner, hostContext, lastNativeTime.getLong(owner) == 0L)
+            }
+        }) ?: return
+
+        val formatHook = ModuleHelper.findAndHookMethod(
+            controller, "updateText", Array<String>::class.java,
+            createDetailedNetSpeedTextHook(emptyText, nativeState, visible) { owner ->
+                val hostContext = context.get(owner) as Context
+                val sample = detailedSpeedSample(owner)?.delta
+                formatDetailedNetSpeedText(
+                    sample?.txSpeed ?: 0L, sample?.rxSpeed ?: 0L,
+                    currentOrBuildDetailedNetSpeedFormatSnapshot(), ModuleHelper.getModuleRes(hostContext),
+                )
+            },
+        )
+        if (formatHook == null) ModuleHelper.guarded { sampleHook.unhook() }
+    }
+
+    internal fun createDetailedNetSpeedTextHook(
+        emptyText: Field,
+        nativeState: Field,
+        visible: Field,
+        format: (Any) -> Array<String?>,
+    ) = object : MethodHook() {
+        override fun before(callback: BeforeHookCallback) {
+            val owner = callback.getThisObject() ?: return
+            // updateVisibility passes its own EMPTY array when clearing the hidden icon.
+            if (callback.getArg(0) === emptyText.get(owner) || !visible.getBoolean(nativeState.get(owner))) return
+            callback.getArgs()[0] = format(owner)
+        }
+    }
+
+    private fun detailedSpeedSample(owner: Any): DetailedSpeedSample? =
+        XposedHelpers.getAdditionalInstanceField(owner, DETAILED_SPEED_SAMPLE) as? DetailedSpeedSample
+
+    private fun sampleDetailedNetSpeed(owner: Any, context: Context, nativeBaselineReset: Boolean) {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java) ?: return
+        val capabilities = connectivity.activeNetwork?.let(connectivity::getNetworkCapabilities)
+        val existing = detailedSpeedSample(owner)
+        if (capabilities == null ||
+            (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
+                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
+        ) {
+            existing?.delta = null
             return
         }
 
-        val mBgHandlerField = XposedHelpers.findField(NetworkSpeedController, "mBgHandler")
-        ModuleHelper.findAndHookMethod(mBgHandlerField.type, "handleMessage", Message::class.java, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val message = callback.getArg(0) as Message
-                if (message.what == 200001) {
-                    val thisObect = XposedHelpers.getSurroundingThis(callback.getThisObject())
-                    var isConnected = false
-                    val mContext = XposedHelpers.getObjectField(thisObect, "mContext") as Context
-                    val mConnectivityManager = mContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                    val nw = mConnectivityManager.activeNetwork
-                    if (nw != null) {
-                        val capabilities = mConnectivityManager.getNetworkCapabilities(nw)
-                        if (capabilities != null && (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))) {
-                            isConnected = true
-                        }
-                    }
-                    if (isConnected) {
-                        val nanoTime = java.lang.System.nanoTime()
-                        var newTime = nanoTime - measureTime
-                        measureTime = nanoTime
-                        if (newTime > 12_000_000_000L || newTime == 0L) newTime = 4_000_000_000L
-                        sampleTrafficBytes()
-                        val delta = computeNetSpeedDelta(
-                            sampledTxBytes,
-                            sampledRxBytes,
-                            txBytesTotal,
-                            rxBytesTotal,
-                            newTime,
-                        )
-                        txSpeed = delta.txSpeed
-                        rxSpeed = delta.rxSpeed
-                        txBytesTotal = delta.txTotal
-                        rxBytesTotal = delta.rxTotal
-                    } else {
-                        txSpeed = 0
-                        rxSpeed = 0
-                    }
-                }
-            }
-        })
-
-        ModuleHelper.findAndHookMethod(NetworkSpeedController, "updateText", Array<String>::class.java, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val context = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
-                val modRes = ModuleHelper.getModuleRes(context)
-                val snapshot = currentOrBuildDetailedNetSpeedFormatSnapshot()
-                callback.getArgs()[0] = formatDetailedNetSpeedText(txSpeed, rxSpeed, snapshot, modRes)
-            }
-        })
+        val state = existing ?: DetailedSpeedSample().also {
+            XposedHelpers.setAdditionalInstanceField(owner, DETAILED_SPEED_SAMPLE, it)
+        }
+        val time = java.lang.System.nanoTime()
+        val elapsed = time - state.measureTime
+        val previous = if (nativeBaselineReset) null else state.delta
+        val duration = if (elapsed in 1..12_000_000_000L) elapsed else 4_000_000_000L
+        state.delta = sampleTrafficDelta(previous, duration)
+        state.measureTime = time
     }
 
     internal class NetSpeedTypefaceState(var base: Typeface? = null, var target: Typeface? = null)
@@ -2669,19 +2706,26 @@ object SystemUIStatusBarHooks {
     @JvmStatic
     fun NetSpeedIntervalHook(lpparam: PackageReadyParam) {
         ensureStatusBarLayoutRuntimeState()
-        val NetworkSpeedController = XposedHelpers.findClass("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.classLoader)
-        val mBgHandlerField = XposedHelpers.findField(NetworkSpeedController, "mBgHandler")
-        ModuleHelper.findAndHookMethod(mBgHandlerField.type, "handleMessage", Message::class.java, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val message = callback.getArg(0) as Message
-                if (message.what == 200001) {
-                    val mBgHandler = callback.getThisObject() as Handler
-                    mBgHandler.removeMessages(200001)
-                    val newInterval = currentOrBuildStatusBarLayoutSnapshot().netSpeedIntervalMs
-                    mBgHandler.sendEmptyMessageDelayed(200001, newInterval)
-                }
-            }
-        })
+        val controller = XposedHelpers.findClass(NETWORK_SPEED_CONTROLLER, lpparam.classLoader)
+        val tick = NetSpeedTickAccess.resolve(controller) ?: return
+        ModuleHelper.findAndHookMethod(
+            tick.handlerType, "handleMessage", Message::class.java,
+            createNetSpeedIntervalHook(tick) { currentOrBuildStatusBarLayoutSnapshot().netSpeedIntervalMs },
+        )
+    }
+
+    internal fun createNetSpeedIntervalHook(tick: NetSpeedTickAccess, intervalMs: () -> Long) = object : MethodHook() {
+        override fun after(callback: AfterHookCallback) {
+            if (callback.getThrowable() != null || (callback.getArg(0) as Message).what != NETWORK_SPEED_TICK) return
+            val delay = intervalMs()
+            if (delay <= 0L || delay == NATIVE_NETWORK_SPEED_INTERVAL_MS) return
+            val handler = callback.getThisObject() as Handler
+            if (tick.controller(handler) == null) return
+
+            // The native tick has already queued its successor.
+            handler.removeMessages(NETWORK_SPEED_TICK)
+            handler.sendEmptyMessageDelayed(NETWORK_SPEED_TICK, delay)
+        }
     }
 
     @JvmStatic

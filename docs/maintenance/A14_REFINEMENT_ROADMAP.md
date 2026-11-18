@@ -137,6 +137,7 @@ r14.27.9 的 309 试用包经受控重建确认 SystemUI 加载 API 102。离线
 - StrongToast 在存在高度匹配基线时才查找并恢复原生子视图。岛体几何与窗口生命周期由动态岛路径负责，StrongToast 已移除无生产调用的旧几何实现及对应专项。
 - 网速样式跟随四份 ROM 经 `StatusIconDisplayable` 分发的 `NetworkSpeedView.onDensityOrFontScaleChanged()`。原生更新数字、单位和暗色状态后，模块恢复这两个子视图的字形并使完整样式失效。选择时钟样式时在应用样式的位置恢复字形。移除进程级 `TextView.setTextAppearance` Hook 和只剩测试调用的样式分支。
 - 温度与电流监控按原生 `NetworkSpeedController` 构造签名读取 Context 和后台 Looper。单行自定义图标只在准确的 `IconManager.addHolder(int, String, boolean, StatusBarIconHolder)` 安装成功后注册。普通图标只访问 holder 的 `mType`，原生链继续执行一次。网速格式、时钟控制器、移动信号状态与暗色回调、挖孔布局也改用四份样本共同的确切签名。
+- 四份 ROM 的网速后台 Handler 在原生 `200001` 节拍结束后安排 4 秒后继。间隔 Hook 仅处理控制器当前后台 Handler 的成功回调，恢复 4 秒时复用原生消息。详细网速在原生隐藏状态跳过网络查询、接口采样和自定义格式化，并保留 `updateVisibility` 传入的 `EMPTY` 清空数组。上下行样本按控制器发布为一对，原生重置或无可用默认网络时重新取基线。
 - 当前候选的 SystemUI 实装、主题与字体重载、第二行网速和宿主性能仍待对应 ROM 实机验收。静态签名通过只覆盖四份离线样本。
 
 ### 实机成本与 Native 取舍（2026-11-08）
