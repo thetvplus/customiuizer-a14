@@ -6,6 +6,7 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -601,8 +602,9 @@ object SystemUIControlCenterHooks {
         ) {
             VolumeModeButtonColorsHook(loader)
         }
+        val gridColumns = MainModule.mPrefs.getInt("system_ccgridcolumns", 4)
         if (MainModule.mPrefs.getBoolean("system_cc_tile_roundedrect")) {
-            CCTileCornerHook(loader)
+            CCTileCornerHook(loader, 4f / gridColumns.coerceAtLeast(4))
         }
         if (MainModule.mPrefs.getBoolean("system_cc_volume_showpct")) {
             ShowVolumePctHook(loader)
@@ -613,9 +615,8 @@ object SystemUIControlCenterHooks {
         ) {
             CCHeaderHook(loader)
         }
-        val customCCGrid = MainModule.mPrefs.getInt("system_ccgridcolumns", 4) > 4
-        if (customCCGrid) {
-            SystemCCGridHookLoader(loader)
+        if (gridColumns > 4) {
+            SystemCCGridHookLoader(loader, gridColumns)
         }
         if (MainModule.mPrefs.getBoolean("system_cc_hide_edit")
             || MainModule.mPrefs.getBoolean("system_cc_hide_profile_monitoring")
@@ -1148,43 +1149,64 @@ object SystemUIControlCenterHooks {
         ControlCenterPluginRuntime.hookIfNeeded(lpparam)
     }
 
-    private var iconScaleRatio = 1f
+    private fun hookGridTileSizing(pluginLoader: ClassLoader, scale: Float) = ModuleHelper.guarded {
+        val tileClass = XposedHelpers.findClass("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader)
+        val resourceIds = XposedHelpers.findClass("miui.systemui.controlcenter.R\$id", pluginLoader)
+        val iconFrameId = resourceIds.getDeclaredField("icon_frame").getInt(null)
+        val findCachedView = tileClass.getDeclaredMethod("_\$_findCachedViewById", Int::class.javaPrimitiveType)
+        val containerHeight = tileClass.getDeclaredField("containerHeight").apply { isAccessible = true }
+        val changeExpand = tileClass.getDeclaredMethod("changeExpand").apply { isAccessible = true }
+        val iconDp = 68f * scale
+        val heightDp = 85f * scale + 1f
 
-    @JvmStatic
-    fun SystemCCGridHookLoader(pluginLoader: ClassLoader) {
-        val cols = MainModule.mPrefs.getInt("system_ccgridcolumns", 4)
-        iconScaleRatio = 4f / cols
-        val resizeIconFrame = object : MethodHook() {
+        fun resizeIconFrame(tile: View) {
+            val iconFrame = findCachedView.invoke(tile, iconFrameId) as? View ?: return
+            val size = (iconDp * tile.resources.displayMetrics.density).toInt()
+            val params = iconFrame.layoutParams
+            if (params.width == size && params.height == size) return
+            params.width = size
+            params.height = size
+        }
+
+        val updateSize = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                val thisView = callback.getThisObject() as FrameLayout
-                val resId = thisView.resources.getIdentifier("icon_frame", "id", "miui.systemui.plugin")
-                val iconFrame = thisView.findViewById<View>(resId)
-                val iconSize = HookUtils.dp2px(68f * iconScaleRatio).toInt()
-                iconFrame.layoutParams.width = iconSize
-                iconFrame.layoutParams.height = iconSize
-
-                if (callback.getMember().name == "onFinishInflate") {
-                    XposedHelpers.callMethod(thisView, "changeExpand")
-                }
+                if (callback.getThrowable() == null) resizeIconFrame(callback.getThisObject() as View)
             }
         }
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader, "updateSize", resizeIconFrame)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader, "onFinishInflate", resizeIconFrame)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.qs.tileview.QSTileItemView", pluginLoader, "updateContainerHeight", object : MethodHook() {
+        val finishInflate = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                val iconSize = HookUtils.dp2px(85f * iconScaleRatio + 1).toInt()
-                XposedHelpers.setObjectField(callback.getThisObject(), "containerHeight", iconSize)
+                if (callback.getThrowable() != null) return
+                val tile = callback.getThisObject() as View
+                resizeIconFrame(tile)
+                // Unlike updateSize, onFinishInflate does not apply the resolved height.
+                changeExpand.invoke(tile)
             }
-        })
+        }
+        val updateHeight = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val tile = callback.getThisObject() as View
+                containerHeight.setInt(tile, (heightDp * tile.resources.displayMetrics.density).toInt())
+            }
+        }
+        check(PreparedHookBatch().install(listOf(
+            tileClass.getDeclaredMethod("updateSize") to updateSize,
+            tileClass.getDeclaredMethod("onFinishInflate") to finishInflate,
+            tileClass.getDeclaredMethod("updateContainerHeight") to updateHeight,
+        )).isActive)
+    }
+
+    internal fun SystemCCGridHookLoader(pluginLoader: ClassLoader, cols: Int) {
+        hookGridTileSizing(pluginLoader, 4f / cols)
 
         // The A14 plugin accepts nullable java.lang.Boolean, not primitive boolean.
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader, "setUseSeparatedPanels", Boolean::class.javaObjectType, object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
-                if (callback.getArgs().isEmpty() || callback.getArg(0) == null) {
+                val bool = callback.getArg(0) as Boolean?
+                if (bool == null) {
                     callback.returnAndSkip(null)
                     return
                 }
-                val bool = callback.getArg(0) as? Boolean ?: return
                 val oldVal = XposedHelpers.getObjectField(callback.getThisObject(), "useSeparatedPanels")
                 if (bool == oldVal) {
                     callback.returnAndSkip(null)
@@ -1266,10 +1288,6 @@ object SystemUIControlCenterHooks {
                 if (leftAdapter) {
                     val companion = XposedHelpers.getStaticObjectField(MainPanelAdapter, "Companion")
                     val contentMap = XposedHelpers.getObjectField(adapter, "contentMap")
-                    if (callback.getArgs().isEmpty()) {
-                        callback.returnAndSkip(cols)
-                        return
-                    }
                     val panelItem = XposedHelpers.callMethod(companion, "getItem", contentMap, callback.getArg(0))
                     if (panelItem == null) {
                         callback.returnAndSkip(cols)
@@ -1299,59 +1317,70 @@ object SystemUIControlCenterHooks {
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.qs.EditButtonController", pluginLoader, "getSpanSize", columnsReplaceHook)
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.qs.QSListController\$EditModeDividerTextItem", pluginLoader, "getSpanSize", columnsReplaceHook)
 
-        // handle secondary panel show
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "updateVisibility", Int::class.javaPrimitiveType!!, object : MethodHook() {
+        hookGridPanelAnimation(pluginLoader)
+    }
+
+    private fun hookGridPanelAnimation(pluginLoader: ClassLoader) = ModuleHelper.guarded {
+        val controller = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader)
+        val commonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
+        val utils = commonUtils.getDeclaredField("INSTANCE").get(null)
+        val isVertical = commonUtils.getDeclaredMethod("getInVerticalMode", Context::class.java)
+        val getContext = controller.getMethod("getContext")
+        val leftPanel = controller.getDeclaredField("leftMainPanel").apply { isAccessible = true }
+        val rightPanel = controller.getDeclaredField("rightMainPanel").apply { isAccessible = true }
+
+        fun inVerticalMode(owner: Any?) = isVertical.invoke(utils, getContext.invoke(owner)) as Boolean
+
+        val updateVisibility = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
-                val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getContext")
-                val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", mContext) as Boolean
-                if (verticalMode) {
-                    val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                    leftMainPanel.visibility = callback.getArg(0) as Int
+                if (callback.getThrowable() != null) return
+                val owner = callback.getThisObject()
+                if (!inVerticalMode(owner)) return
+                val left = leftPanel.get(owner) as View
+                val visibility = callback.getArg(0) as Int
+                if (left.visibility != visibility) left.visibility = visibility
+            }
+        }
+        val forceToShow = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val left = leftPanel.get(callback.getThisObject()) as View
+                if (left.alpha != 1f) left.alpha = 1f
+            }
+        }
+        val updateAlpha = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    val owner = chain.thisObject
+                    val left = leftPanel.get(owner) as View
+                    val alpha = (rightPanel.get(owner) as View).alpha
+                    if (left.alpha != alpha && inVerticalMode(owner)) left.alpha = alpha
                 }
+                return result
             }
-        })
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "forceToShow", Any::class.java, object : MethodHook() {
+        }
+        val configurationChanged = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                leftMainPanel.alpha = 1.0f
+                if (callback.getThrowable() != null) return
+                val changes = callback.getArg(0) as Int
+                if (changes and ActivityInfo.CONFIG_ORIENTATION == 0) return
+                val owner = callback.getThisObject()
+                val left = leftPanel.get(owner) as View
+                val vertical = inVerticalMode(owner)
+                val right = if (vertical) rightPanel.get(owner) as View else null
+                val alpha = right?.alpha ?: 1f
+                val visibility = right?.visibility ?: View.VISIBLE
+                if (left.alpha != alpha) left.alpha = alpha
+                if (left.visibility != visibility) left.visibility = visibility
             }
-        })
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "onAnimUpdate", object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
-                val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getContext")
-                val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", mContext) as Boolean
-                if (verticalMode) {
-                    val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                    val rightMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "rightMainPanel") as ViewGroup
-                    val alpha = rightMainPanel.alpha
-                    leftMainPanel.alpha = alpha
-                }
-            }
-        })
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "onConfigurationChanged", Int::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val i = callback.getArg(0) as Int
-                if ((i and 128) != 0) {
-                    val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
-                    val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                    val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getContext")
-                    val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", mContext) as Boolean
-                    val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                    val rightMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "rightMainPanel") as ViewGroup
-                    if (verticalMode) {
-                        leftMainPanel.alpha = rightMainPanel.alpha
-                        leftMainPanel.visibility = rightMainPanel.visibility
-                    } else {
-                        leftMainPanel.alpha = 1.0f
-                        leftMainPanel.visibility = View.VISIBLE
-                    }
-                }
-            }
-        })
+        }
+        check(PreparedHookBatch().install(listOf(
+            controller.getDeclaredMethod("updateVisibility", Int::class.javaPrimitiveType) to updateVisibility,
+            controller.getDeclaredMethod("forceToShow", Any::class.java) to forceToShow,
+            controller.getDeclaredMethod("onAnimUpdate") to updateAlpha,
+            controller.getDeclaredMethod("onConfigurationChanged", Int::class.javaPrimitiveType) to configurationChanged,
+        )).isActive)
     }
 
     @JvmStatic
@@ -1564,12 +1593,11 @@ object SystemUIControlCenterHooks {
         }
     }
 
-    @JvmStatic
-    fun CCTileCornerHook(pluginLoader: ClassLoader) {
+    private fun CCTileCornerHook(pluginLoader: ClassLoader, scale: Float) {
+        val radiusDp = 20f * scale
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.qs.tileview.QSTileItemIconView", pluginLoader, "getCornerRadius", object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
-                val radius = 20 * iconScaleRatio
-                callback.returnAndSkip(HookUtils.dp2px(radius))
+                callback.returnAndSkip(HookUtils.dp2px(radiusDp))
             }
         })
         val radiusHook = object : MethodHook() {
@@ -1577,8 +1605,7 @@ object SystemUIControlCenterHooks {
                 val drawable = callback.getResult()
                 val gradientDrawable = drawable as? GradientDrawable
                 if (gradientDrawable != null) {
-                    val radius = 20 * iconScaleRatio
-                    gradientDrawable.cornerRadius = HookUtils.dp2px(radius)
+                    gradientDrawable.cornerRadius = HookUtils.dp2px(radiusDp)
                 }
             }
         }
