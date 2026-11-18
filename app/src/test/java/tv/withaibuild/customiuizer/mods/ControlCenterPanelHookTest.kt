@@ -3,6 +3,9 @@ package tv.withaibuild.customiuizer.mods
 import android.app.Application
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.view.View.MeasureSpec
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
 import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Executable
@@ -30,16 +33,79 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class ControlCenterPanelHookTest {
-    @Test fun nullableRomBooleanHookKeepsTheMovedTilePanelAttached() = withGridHooks { installed ->
+    @Test fun verticalStackKeepsTheLeftPanelAttachedAndHorizontalUsesNativeMargins() = withGridHooks { installed ->
         val target = MainPanelController::class.java.getDeclaredMethod("setUseSeparatedPanels", Boolean::class.javaObjectType)
         val owner = MainPanelController(RuntimeEnvironment.getApplication())
-        for (value in listOf(null, false, false)) {
-            installed.invoke(target, owner, value) { error("The grid hook owns panel placement") }
+        val stack = owner.horizontalMainPanel
+        val left = owner.leftMainPanel
+        var nativeCalls = 0
+        fun setSeparated(value: Boolean?) = installed.invoke(target, owner, value) {
+            nativeCalls++
+            owner.setUseSeparatedPanels(value)
         }
+
+        setSeparated(null)
+        assertNull(left.parent)
+        setSeparated(false)
+        setSeparated(false)
         assertEquals(false, owner.useSeparatedPanels)
-        assertSame(owner.horizontalMainPanel, owner.leftMainPanel.parent)
-        assertEquals(LinearLayout.VERTICAL, owner.horizontalMainPanel.orientation)
-        assertEquals(1, owner.horizontalMainPanel.indexOfChild(owner.leftMainPanel))
+        assertSame(stack, left.parent)
+        assertEquals(LinearLayout.VERTICAL, stack.orientation)
+        assertEquals(1, stack.indexOfChild(left))
+
+        setSeparated(true)
+        assertEquals(LinearLayout.HORIZONTAL, stack.orientation)
+        assertEquals(0, stack.indexOfChild(left))
+        assertEquals(24, (left.layoutParams as LinearLayout.LayoutParams).marginEnd)
+        val removals = stack.removals
+
+        setSeparated(false)
+        assertSame(stack, left.parent)
+        assertEquals(1, stack.indexOfChild(left))
+        assertEquals(LinearLayout.VERTICAL, stack.orientation)
+        assertEquals(0, (left.layoutParams as LinearLayout.LayoutParams).marginEnd)
+        assertEquals(removals, stack.removals)
+
+        owner.configuredMargin = 36
+        setSeparated(true)
+        assertEquals(36, owner.panelMargin)
+        assertEquals(36, (left.layoutParams as LinearLayout.LayoutParams).marginEnd)
+        assertEquals(4, nativeCalls)
+    }
+
+    @Test fun onlyChangedStackedDimensionsRequestLayout() = withGridHooks { installed ->
+        val owner = MainPanelController(RuntimeEnvironment.getApplication())
+        val target = MainPanelController::class.java.getDeclaredMethod("setUseSeparatedPanels", Boolean::class.javaObjectType)
+        val resize = MainPanelController::class.java.getDeclaredMethod("updatePanelSize")
+        val stack = owner.horizontalMainPanel
+        val panels = listOf(owner.leftMainPanel, owner.rightMainPanel)
+        val spec = MeasureSpec.makeMeasureSpec(400, MeasureSpec.EXACTLY)
+        fun layout() {
+            stack.measure(spec, spec)
+            stack.layout(0, 0, 400, 400)
+        }
+        fun setSeparated(value: Boolean) = installed.invoke(target, owner, value) { owner.setUseSeparatedPanels(value) }
+        var nativeCalls = 0
+        fun updateSize() = installed.invoke(resize, owner) { nativeCalls++; owner.updatePanelSize() }
+
+        setSeparated(false)
+        layout()
+        owner.panelWidth = 240
+        updateSize()
+        for (panel in panels) {
+            assertEquals(240, panel.layoutParams.width)
+            assertEquals(WRAP_CONTENT, panel.layoutParams.height)
+            assertTrue(panel.isLayoutRequested)
+        }
+        layout()
+        updateSize()
+        assertTrue(panels.none { it.isLayoutRequested })
+        assertEquals(0, nativeCalls)
+
+        setSeparated(true)
+        updateSize()
+        assertEquals(1, nativeCalls)
+        assertTrue(panels.all { it.layoutParams.height == MATCH_PARENT })
     }
 
     @Test fun nativeTileInflateAndResizeUseTheSameCustomGeometry() = withGridHooks { installed ->

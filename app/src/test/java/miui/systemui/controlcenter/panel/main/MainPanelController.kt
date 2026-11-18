@@ -2,21 +2,51 @@ package miui.systemui.controlcenter.panel.main
 
 import android.content.Context
 import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.LinearLayout
 import miui.systemui.util.CommonUtils
 
 class MainPanelController(context: Context) {
     @JvmField var useSeparatedPanels: Boolean? = null
-    @JvmField val horizontalMainPanel = LinearLayout(context)
+    @JvmField var panelWidth = 120
+    @JvmField var panelMargin = 0
+    @JvmField val horizontalMainPanel = PanelStack(context)
     @JvmField val leftMainPanel = LinearLayout(context)
     @JvmField val rightMainPanel = LinearLayout(context)
+    var configuredMargin = 24
+
     init {
-        horizontalMainPanel.addView(leftMainPanel)
-        horizontalMainPanel.addView(rightMainPanel)
+        leftMainPanel.layoutParams = LinearLayout.LayoutParams(panelWidth, MATCH_PARENT)
+        horizontalMainPanel.addView(rightMainPanel, LinearLayout.LayoutParams(panelWidth, MATCH_PARENT))
     }
+
     fun setUseSeparatedPanels(value: Boolean?) {
+        if (value == null || value == useSeparatedPanels) return
         useSeparatedPanels = value
-        if (value == false) horizontalMainPanel.removeView(leftMainPanel)
+        if (value) {
+            horizontalMainPanel.addView(leftMainPanel, 0)
+            panelMargin = configuredMargin
+            (leftMainPanel.layoutParams as LinearLayout.LayoutParams).marginEnd = panelMargin
+        } else {
+            horizontalMainPanel.removeView(leftMainPanel)
+        }
+    }
+
+    fun updatePanelSize() {
+        for (panel in listOf(leftMainPanel, rightMainPanel)) {
+            panel.layoutParams.width = panelWidth
+            panel.layoutParams.height = MATCH_PARENT
+        }
+    }
+
+    class PanelStack(context: Context) : LinearLayout(context) {
+        var removals = 0
+            private set
+
+        override fun onViewRemoved(child: View) {
+            super.onViewRemoved(child)
+            removals++
+        }
     }
 }
 

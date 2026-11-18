@@ -1199,56 +1199,7 @@ object SystemUIControlCenterHooks {
     internal fun SystemCCGridHookLoader(pluginLoader: ClassLoader, cols: Int) {
         hookGridTileSizing(pluginLoader, 4f / cols)
 
-        // The A14 plugin accepts nullable java.lang.Boolean, not primitive boolean.
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader, "setUseSeparatedPanels", Boolean::class.javaObjectType, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val bool = callback.getArg(0) as Boolean?
-                if (bool == null) {
-                    callback.returnAndSkip(null)
-                    return
-                }
-                val oldVal = XposedHelpers.getObjectField(callback.getThisObject(), "useSeparatedPanels")
-                if (bool == oldVal) {
-                    callback.returnAndSkip(null)
-                    return
-                }
-                XposedHelpers.setObjectField(callback.getThisObject(), "useSeparatedPanels", bool)
-                val horizontalMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "horizontalMainPanel") as LinearLayout
-                val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                horizontalMainPanel.removeView(leftMainPanel)
-                if (!bool) {
-                    horizontalMainPanel.addView(leftMainPanel)
-                    val layoutParams = leftMainPanel.layoutParams
-                    (layoutParams as ViewGroup.MarginLayoutParams).setMarginEnd(0)
-                    horizontalMainPanel.orientation = LinearLayout.VERTICAL
-                } else {
-                    horizontalMainPanel.addView(leftMainPanel, 0)
-                    val marginId = horizontalMainPanel.resources.getIdentifier("control_center_horizontal_margin_center", "dimen", "miui.systemui.plugin")
-                    val marginEnd = horizontalMainPanel.resources.getDimensionPixelSize(marginId)
-                    XposedHelpers.setObjectField(callback.getThisObject(), "panelMargin", marginEnd)
-                    val layoutParams = leftMainPanel.layoutParams
-                    (layoutParams as ViewGroup.MarginLayoutParams).setMarginEnd(marginEnd)
-                    horizontalMainPanel.orientation = LinearLayout.HORIZONTAL
-                }
-                callback.returnAndSkip(null)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader, "updatePanelSize", object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val useSeparatedPanels = XposedHelpers.getObjectField(callback.getThisObject(), "useSeparatedPanels") as? Boolean
-                if (useSeparatedPanels != true) {
-                    val leftMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "leftMainPanel") as ViewGroup
-                    val rightMainPanel = XposedHelpers.getObjectField(callback.getThisObject(), "rightMainPanel") as ViewGroup
-                    val panelWidth = XposedHelpers.getIntField(callback.getThisObject(), "panelWidth")
-                    leftMainPanel.layoutParams.width = panelWidth
-                    leftMainPanel.layoutParams.height = -2
-                    rightMainPanel.layoutParams.width = panelWidth
-                    rightMainPanel.layoutParams.height = -2
-                    callback.returnAndSkip(null)
-                }
-            }
-        })
+        hookGridPanelLayout(pluginLoader)
 
         val columnsReplaceHook = object : MethodHook() {
             override fun before(callback: BeforeHookCallback) { callback.returnAndSkip(cols) }
@@ -1259,6 +1210,67 @@ object SystemUIControlCenterHooks {
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.qs.QSListController\$EditModeDividerTextItem", pluginLoader, "getSpanSize", columnsReplaceHook)
 
         hookGridPanelAnimation(pluginLoader)
+    }
+
+    private fun hookGridPanelLayout(pluginLoader: ClassLoader) = ModuleHelper.guarded {
+        val controller = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader)
+        val leftPanel = controller.getDeclaredField("leftMainPanel")
+        val rightPanel = controller.getDeclaredField("rightMainPanel")
+        val parentPanel = controller.getDeclaredField("horizontalMainPanel")
+        val panelWidth = controller.getDeclaredField("panelWidth")
+        val separated = controller.getDeclaredField("useSeparatedPanels")
+        val setSeparated = controller.getDeclaredMethod("setUseSeparatedPanels", Boolean::class.javaObjectType)
+        val updatePanelSize = controller.getDeclaredMethod("updatePanelSize")
+
+        val positionPanels = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                val horizontal = callback.getArg(0) as Boolean? ?: return
+                val owner = callback.getThisObject()
+                if (horizontal == separated.get(owner)) return
+
+                val parent = parentPanel.get(owner) as LinearLayout
+                val left = leftPanel.get(owner) as View
+                if (horizontal) {
+                    // The ROM adds the left panel at index 0 and resolves the new configuration's margin.
+                    if (left.parent === parent) parent.removeView(left)
+                    parent.orientation = LinearLayout.HORIZONTAL
+                    return
+                }
+
+                if (left.parent !== parent) {
+                    parent.addView(left)
+                } else if (parent.indexOfChild(left) != parent.childCount - 1) {
+                    parent.bringChildToFront(left)
+                }
+                val params = left.layoutParams as ViewGroup.MarginLayoutParams
+                if (params.marginEnd != 0) {
+                    params.marginEnd = 0
+                    left.layoutParams = params
+                }
+                parent.orientation = LinearLayout.VERTICAL
+                separated.set(owner, false)
+                callback.returnAndSkip(null)
+            }
+        }
+        val sizePanels = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                val owner = callback.getThisObject()
+                if (separated.get(owner) == true) return
+                val width = panelWidth.getInt(owner)
+                resizeStackedPanel(leftPanel.get(owner) as View, width)
+                resizeStackedPanel(rightPanel.get(owner) as View, width)
+                callback.returnAndSkip(null)
+            }
+        }
+        check(PreparedHookBatch().install(listOf(setSeparated to positionPanels, updatePanelSize to sizePanels)).isActive)
+    }
+
+    private fun resizeStackedPanel(panel: View, width: Int) {
+        val params = panel.layoutParams ?: return
+        if (params.width == width && params.height == ViewGroup.LayoutParams.WRAP_CONTENT) return
+        params.width = width
+        params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+        if (!panel.isLayoutRequested) panel.requestLayout()
     }
 
     private fun hookGridPanelAnimation(pluginLoader: ClassLoader) = ModuleHelper.guarded {
