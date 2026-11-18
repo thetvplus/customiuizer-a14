@@ -139,6 +139,7 @@ def documents(published: dict) -> dict[str, str]:
                     and re.search(r"^minApiVersion=102\s*$", props, re.M), "Unsupported source scope/API contract")
     source_url = f"https://github.com/{release.REPO}"
     download_url = f"https://github.com/{DOWNLOAD}"
+    download_docs = f"{download_url}/blob/main"
     tag = f"{code}-{name}"
     retained = set()
     for page in range(1, 101):
@@ -180,10 +181,12 @@ def documents(published: dict) -> dict[str, str]:
                 history.append(f"## {version}\n\n{public}\n\n[{'发行记录' if chinese else 'Release'}]({source_url}/releases/tag/{version})")
         release.require(any(version == name for version, _ in sections) and name in retained, "Published changelog is missing")
         target = "CHANGELOG_CN.md" if chinese else "CHANGELOG.md"
-        language_link = "简体中文 | [English](CHANGELOG.md)" if chinese else "[简体中文](CHANGELOG_CN.md) | English"
+        language_link = (f"简体中文 | [English]({download_docs}/CHANGELOG.md)" if chinese else
+                         f"[简体中文]({download_docs}/CHANGELOG_CN.md) | English")
         result[target] = "# 米客 A14 — " + ("更新记录" if chinese else "Changelog") + f"\n\n{language_link}\n\n" + "\n\n".join(history) + "\n"
         readme = "README.md" if chinese else "README_EN.md"
-        link = "简体中文 | [English](README_EN.md)" if chinese else "[简体中文](README.md) | English"
+        link = (f"简体中文 | [English]({download_docs}/README_EN.md)" if chinese else
+                f"[简体中文]({download_docs}/README.md) | English")
         intro = ("面向 **HyperOS 1 / Android 14 / arm64-v8a** 的系统界面与交互定制模块，需要 **libxposed API 102 或更高版本**。"
                  if chinese else "System UI and interaction customization for **HyperOS 1 / Android 14 / arm64-v8a**, requiring **libxposed API 102 or later**.")
         install = ("1. 下载并安装正式 APK；同签名覆盖安装保留应用数据。\n2. 在 Xposed 框架中启用模块并选择所需作用域。\n3. 重启相关进程或设备，按设置页提示启用功能。\n\n其他 Android / HyperOS 大版本不在支持范围内。请勿与上游或其他 CustoMIUIzer 派生模块同时启用。"
@@ -191,7 +194,7 @@ def documents(published: dict) -> dict[str, str]:
         result[readme] = (f"# 米客 A14｜CustoMIUIzer A14\n\n{link}\n\n{intro}\n\n"
                          f"[{'下载正式 APK' if chinese else 'Download official APK'}]({download_url}/releases/download/{tag}/{quote(apk)}) · "
                          f"[{'发行说明' if chinese else 'Release notes'}]({download_url}/releases/tag/{tag}) · "
-                         f"[{'更新记录' if chinese else 'Changelog'}]({target})\n\n"
+                         f"[{'更新记录' if chinese else 'Changelog'}]({download_docs}/{target})\n\n"
                          f"[{'Telegram 交流群' if chinese else 'Telegram community'}]({release.POLICY['community_url']})\n\n"
                          f"## {'当前正式版' if chinese else 'Current stable release'}\n\n"
                          f"`{name}` · versionCode `{code}` · `{meta['application_id']}`\n\n"

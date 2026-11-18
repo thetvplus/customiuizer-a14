@@ -121,6 +121,13 @@ class DownloadDocumentsTest(unittest.TestCase):
             self.assertEqual(1, result[filename].count(release.POLICY["community_url"]))
             self.assertNotIn("/issues", result[filename])
         self.assertIn("/blob/master/README_EN.md)", result["README_EN.md"])
+        download_docs = f"https://github.com/{docs.DOWNLOAD}/blob/main"
+        self.assertIn(f"[English]({download_docs}/README_EN.md)", result["README.md"])
+        self.assertIn(f"[简体中文]({download_docs}/README.md)", result["README_EN.md"])
+        self.assertIn(f"[更新记录]({download_docs}/CHANGELOG_CN.md)", result["README.md"])
+        self.assertIn(f"[Changelog]({download_docs}/CHANGELOG.md)", result["README_EN.md"])
+        self.assertIn(f"[English]({download_docs}/CHANGELOG.md)", result["CHANGELOG_CN.md"])
+        self.assertIn(f"[简体中文]({download_docs}/CHANGELOG_CN.md)", result["CHANGELOG.md"])
 
     def test_readme_uses_authored_summary_but_changelog_keeps_the_full_user_details(self):
         server = Server()
