@@ -8,7 +8,13 @@ import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Executable
 import java.lang.reflect.Proxy
 import miui.systemui.controlcenter.panel.main.MainPanelAnimController
+import miui.systemui.controlcenter.panel.main.MainPanelContent
+import miui.systemui.controlcenter.panel.main.MainPanelContentDistributor
 import miui.systemui.controlcenter.panel.main.MainPanelController
+import miui.systemui.controlcenter.panel.main.footer.FooterSpaceController
+import miui.systemui.controlcenter.panel.main.qs.EditButtonController
+import miui.systemui.controlcenter.panel.main.qs.QSListController
+import miui.systemui.controlcenter.panel.main.security.SecurityFooterController
 import miui.systemui.controlcenter.qs.tileview.QSTileItemView
 import miui.systemui.util.CommonUtils
 import org.junit.Assert.*
@@ -94,7 +100,68 @@ class ControlCenterPanelHookTest {
         }
     }
 
-    private fun withGridHooks(test: (Map<Executable, XposedInterface.Hooker>) -> Unit) {
+    @Test fun verticalRebuildMovesAvailableControllersInNativeOrder() = withGridHooks(
+        install = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = false, hideSecurity = false) },
+    ) { installed ->
+        val qs = QSListController()
+        val edit = EditButtonController()
+        val security = SecurityFooterController()
+        val spacer = FooterSpaceController()
+        val first = object : MainPanelContent {
+            override val priority = 50
+            override val onRight = false
+        }
+        val last = object : MainPanelContent { override val priority = 230 }
+        val owner = MainPanelContentDistributor(listOf(last, security, spacer, edit, qs, first))
+        val left = owner.leftPanelContent
+        val right = owner.rightPanelContent
+
+        installed.distribute(owner, horizontal = false)
+        assertTrue(left.isEmpty() && right.isEmpty())
+        owner.inited = true
+        installed.distribute(owner, horizontal = true)
+        assertEquals(listOf(first), left)
+        assertEquals(listOf(qs, edit, security, spacer, last), right)
+        installed.distribute(owner, horizontal = false)
+        assertEquals(listOf(qs, edit, security), left)
+        assertEquals(listOf(first, last), right)
+
+        security.available = false
+        installed.distribute(owner, horizontal = false)
+        assertEquals(listOf(qs, edit), left)
+        assertEquals(listOf(first, last), right)
+    }
+
+    @Test fun combinedOptionsKeepTheNativeSourceListAndBindOnlyTheLeftGrid() = withGridHooks(
+        install = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = true, hideSecurity = true) },
+    ) { installed ->
+        val qs = QSListController()
+        val spacer = FooterSpaceController()
+        val owner = MainPanelContentDistributor(listOf(EditButtonController(), SecurityFooterController(), qs, spacer))
+        val source = owner.childControllers
+        installed.invoke(owner.javaClass.declaredConstructors.single(), owner) {}
+        assertSame(source, owner.childControllers)
+        assertEquals(listOf(qs, spacer), source)
+        assertEquals(5, owner.leftAdapter.layoutManager.columns)
+        assertEquals(2, owner.rightAdapter.layoutManager.columns)
+
+        owner.inited = true
+        installed.distribute(owner, horizontal = true)
+        assertEquals(listOf(qs, spacer), owner.rightPanelContent)
+        installed.distribute(owner, horizontal = false)
+        assertEquals(listOf(qs), owner.leftPanelContent)
+        assertTrue(owner.rightPanelContent.isEmpty())
+    }
+
+    private fun Map<Executable, XposedInterface.Hooker>.distribute(owner: MainPanelContentDistributor, horizontal: Boolean) {
+        val method = owner.javaClass.getDeclaredMethod("distributePanels", Boolean::class.javaPrimitiveType)
+        invoke(method, owner, horizontal) { owner.distributePanels(horizontal) }
+    }
+
+    private fun withGridHooks(
+        install: (ClassLoader) -> Unit = { SystemUIControlCenterHooks.SystemCCGridHookLoader(it, 5) },
+        test: (Map<Executable, XposedInterface.Hooker>) -> Unit,
+    ) {
         val previous = XposedHelpers.moduleInst
         val installed = LinkedHashMap<Executable, XposedInterface.Hooker>()
         try {
@@ -111,7 +178,7 @@ class ControlCenterPanelHookTest {
                     }
                 }
             } as XposedInterface
-            SystemUIControlCenterHooks.SystemCCGridHookLoader(javaClass.classLoader!!, 5)
+            install(javaClass.classLoader!!)
             test(installed)
         } finally {
             XposedHelpers.moduleInst = previous

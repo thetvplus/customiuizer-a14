@@ -53,7 +53,6 @@ import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.StepCounterController
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.util.ArrayList
-import java.util.Comparator
 import java.lang.System
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -618,11 +617,12 @@ object SystemUIControlCenterHooks {
         if (gridColumns > 4) {
             SystemCCGridHookLoader(loader, gridColumns)
         }
-        if (MainModule.mPrefs.getBoolean("system_cc_hide_edit")
-            || MainModule.mPrefs.getBoolean("system_cc_hide_profile_monitoring")
-        ) {
-            CCHideEditButtonHook(loader)
-        }
+        hookPanelContent(
+            loader,
+            gridColumns,
+            hideEdit = MainModule.mPrefs.getBoolean("system_cc_hide_edit"),
+            hideSecurity = MainModule.mPrefs.getBoolean("system_cc_hide_profile_monitoring"),
+        )
         if (MainModule.mPrefs.getBoolean("system_cc_btandtorch_ascard")) {
             CCBluetoothAsCardHook(loader)
         }
@@ -1234,35 +1234,6 @@ object SystemUIControlCenterHooks {
             }
         })
 
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, "distributePanels", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val horizontal = callback.getArg(0) as Boolean
-                if (!horizontal && XposedHelpers.getBooleanField(callback.getThisObject(), "inited")) {
-                    val rightPanelContent = XposedHelpers.getObjectField(callback.getThisObject(), "rightPanelContent") as ArrayList<*>
-                    val leftPanelContent = XposedHelpers.getObjectField(callback.getThisObject(), "leftPanelContent") as ArrayList<Any>
-                    val size = rightPanelContent.size
-                    for (i in size - 1 downTo 0) {
-                        val controller = rightPanelContent[i]
-                        val className = controller?.javaClass?.canonicalName ?: ""
-                        if (className.contains("EditButtonController")
-                            || className.contains("SecurityFooterController")
-                            || className.contains("QSListController")
-                        ) {
-                            rightPanelContent.removeAt(i)
-                            leftPanelContent.add(controller)
-                        } else if (className.contains("FooterSpaceController")) {
-                            rightPanelContent.removeAt(i)
-                        }
-                    }
-                    leftPanelContent.sortWith(Comparator { lhs, rhs ->
-                        val leftPriority = XposedHelpers.callMethod(lhs, "getPriority") as Int
-                        val rightPriority = XposedHelpers.callMethod(rhs, "getPriority") as Int
-                        leftPriority - rightPriority
-                    })
-                }
-            }
-        })
-
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader, "updatePanelSize", object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
                 val useSeparatedPanels = XposedHelpers.getObjectField(callback.getThisObject(), "useSeparatedPanels") as? Boolean
@@ -1279,36 +1250,6 @@ object SystemUIControlCenterHooks {
             }
         })
 
-        val MainPanelAdapter = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.recyclerview.MainPanelAdapter", pluginLoader)
-
-        val spanSizeHook = object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val adapter = XposedHelpers.getSurroundingThis(callback.getThisObject())
-                val leftAdapter = XposedHelpers.getAdditionalInstanceField(adapter, "leftAdapter") != null
-                if (leftAdapter) {
-                    val companion = XposedHelpers.getStaticObjectField(MainPanelAdapter, "Companion")
-                    val contentMap = XposedHelpers.getObjectField(adapter, "contentMap")
-                    val panelItem = XposedHelpers.callMethod(companion, "getItem", contentMap, callback.getArg(0))
-                    if (panelItem == null) {
-                        callback.returnAndSkip(cols)
-                    } else {
-                        callback.returnAndSkip(XposedHelpers.callMethod(panelItem, "getSpanSize"))
-                    }
-                }
-            }
-        }
-
-        val spanHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
-        ModuleHelper.hookAllConstructors("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, object : MethodHook() {
-            override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
-                if (callback.getThrowable() != null) return
-                configureLeftPanelColumns(callback.getThisObject() ?: return, cols) { lookupClass ->
-                    spanHooks.getOrPut(lookupClass) { HookInstallStateMachine() }.install {
-                        ModuleHelper.findAndHookMethod(lookupClass, "getSpanSize", Int::class.javaPrimitiveType!!, spanSizeHook) != null
-                    }
-                }
-            }
-        })
         val columnsReplaceHook = object : MethodHook() {
             override fun before(callback: BeforeHookCallback) { callback.returnAndSkip(cols) }
         }
@@ -1383,76 +1324,104 @@ object SystemUIControlCenterHooks {
         )).isActive)
     }
 
-    @JvmStatic
-    fun CCHideEditButtonHook(pluginLoader: ClassLoader) {
-        val hideEdit = MainModule.mPrefs.getBoolean("system_cc_hide_edit")
-        val hideSecurity = MainModule.mPrefs.getBoolean("system_cc_hide_profile_monitoring")
-        if (!hideEdit && !hideSecurity) return
+    internal fun hookPanelContent(
+        pluginLoader: ClassLoader,
+        columns: Int,
+        hideEdit: Boolean,
+        hideSecurity: Boolean,
+    ) = ModuleHelper.guarded {
+        val customGrid = columns > 4
+        if (!customGrid && !hideEdit && !hideSecurity) return@guarded
+        val panelPackage = "miui.systemui.controlcenter.panel.main"
+        val distributor = XposedHelpers.findClass("$panelPackage.MainPanelContentDistributor", pluginLoader)
+        val editButton = if (customGrid || hideEdit) {
+            XposedHelpers.findClass("$panelPackage.qs.EditButtonController", pluginLoader)
+        } else null
+        val securityFooter = if (customGrid || hideSecurity) {
+            XposedHelpers.findClass("$panelPackage.security.SecurityFooterController", pluginLoader)
+        } else null
+        val childControllers = if (hideEdit || hideSecurity) distributor.getDeclaredField("childControllers") else null
+        val prepareLookup = if (customGrid) prepareGridSpanLookup(pluginLoader, columns) else null
+        val constructor = distributor.declaredConstructors.single()
+        val initialize = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val owner = callback.getThisObject() ?: return
+                if (childControllers != null) {
+                    val children = childControllers.get(owner) as ArrayList<*>
+                    for (index in children.lastIndex downTo 0) {
+                        val type = children[index]?.javaClass
+                        if ((hideEdit && type == editButton) || (hideSecurity && type == securityFooter)) {
+                            children.removeAt(index)
+                        }
+                    }
+                }
+                if (prepareLookup != null) configureLeftPanelColumns(owner, columns, prepareLookup)
+            }
+        }
+        check(ModuleHelper.findAndHookConstructor(
+            distributor.name, pluginLoader, *constructor.parameterTypes, initialize,
+        ) != null)
+        if (customGrid) {
+            val qsList = XposedHelpers.findClass("$panelPackage.qs.QSListController", pluginLoader)
+            val footerSpace = XposedHelpers.findClass("$panelPackage.footer.FooterSpaceController", pluginLoader)
+            val inited = XposedHelpers.findField(distributor, "inited")
+            val leftContent = distributor.getDeclaredField("leftPanelContent")
+            val rightContent = distributor.getDeclaredField("rightPanelContent")
+            val distributePanels = distributor.getDeclaredMethod("distributePanels", Boolean::class.javaPrimitiveType)
+            check(ModuleHelper.hookMethod(distributePanels, object : MethodHook() {
+                @Suppress("UNCHECKED_CAST")
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null || callback.getArg(0) as Boolean) return
+                    val owner = callback.getThisObject()
+                    if (!inited.getBoolean(owner)) return
+                    val left = leftContent.get(owner) as ArrayList<Any>
+                    val right = rightContent.get(owner) as ArrayList<Any>
+                    // The ROM clears both lists first and emits the vertical items in priority order.
+                    var retained = 0
+                    for (index in right.indices) {
+                        val controller = right[index]
+                        when (controller.javaClass) {
+                            qsList, editButton, securityFooter -> left.add(controller)
+                            footerSpace -> Unit
+                            else -> {
+                                if (retained != index) right[retained] = controller
+                                retained++
+                            }
+                        }
+                    }
+                    for (index in right.lastIndex downTo retained) right.removeAt(index)
+                }
+            }) != null)
+        }
+    }
 
-        fun shouldHide(controller: Any?): Boolean {
-            val className = controller?.javaClass?.canonicalName ?: ""
-            return (hideEdit && className.contains("EditButtonController"))
-                || (hideSecurity && className.contains("SecurityFooterController"))
+    private fun prepareGridSpanLookup(pluginLoader: ClassLoader, cols: Int): (Class<*>) -> Unit {
+        val adapterClass = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.recyclerview.MainPanelAdapter", pluginLoader)
+
+        val spanSizeHook = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                val adapter = XposedHelpers.getSurroundingThis(callback.getThisObject())
+                val leftAdapter = XposedHelpers.getAdditionalInstanceField(adapter, "leftAdapter") != null
+                if (leftAdapter) {
+                    val companion = XposedHelpers.getStaticObjectField(adapterClass, "Companion")
+                    val contentMap = XposedHelpers.getObjectField(adapter, "contentMap")
+                    val panelItem = XposedHelpers.callMethod(companion, "getItem", contentMap, callback.getArg(0))
+                    if (panelItem == null) {
+                        callback.returnAndSkip(cols)
+                    } else {
+                        callback.returnAndSkip(XposedHelpers.callMethod(panelItem, "getSpanSize"))
+                    }
+                }
+            }
         }
 
-        // Filter the source list when the distributor is first created.
-        ModuleHelper.hookAllConstructors("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val thisObj = callback.getThisObject()
-                val rawChildControllers = try {
-                    XposedHelpers.getObjectField(thisObj, "childControllers")
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    return
-                }
-
-                val childControllers: MutableList<Any?> = when (rawChildControllers) {
-                    is MutableList<*> -> rawChildControllers.toMutableList()
-                    is List<*> -> ArrayList(rawChildControllers as Collection<Any?>)
-                    else -> return
-                }
-
-                val iter = childControllers.iterator()
-                while (iter.hasNext()) {
-                    if (shouldHide(iter.next())) iter.remove()
-                }
-
-                try {
-                    XposedHelpers.setObjectField(thisObj, "childControllers", childControllers)
-                } catch (ignored: Throwable) {
-                    FatalErrors.unwrapAndRethrowIfFatal(ignored)
-                    // final or unmodifiable field: rely on the distributePanels fallback
-                }
+        val spanHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
+        return { lookupClass ->
+            spanHooks.getOrPut(lookupClass) { HookInstallStateMachine() }.install {
+                ModuleHelper.findAndHookMethod(lookupClass, "getSpanSize", Int::class.javaPrimitiveType!!, spanSizeHook) != null
             }
-        })
-
-        // Also remove from the panel content lists each time they are rebuilt.
-        ModuleHelper.hookAllMethods("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, "distributePanels", object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val thisObj = callback.getThisObject()
-                val rightPanelContent = try {
-                    XposedHelpers.getObjectField(thisObj, "rightPanelContent") as? ArrayList<*>
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    null
-                } ?: return
-                val leftPanelContent = try {
-                    XposedHelpers.getObjectField(thisObj, "leftPanelContent") as? ArrayList<*>
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    null
-                } ?: return
-
-                val sizeRight = rightPanelContent.size
-                for (i in sizeRight - 1 downTo 0) {
-                    if (shouldHide(rightPanelContent[i])) rightPanelContent.removeAt(i)
-                }
-                val sizeLeft = leftPanelContent.size
-                for (i in sizeLeft - 1 downTo 0) {
-                    if (shouldHide(leftPanelContent[i])) leftPanelContent.removeAt(i)
-                }
-            }
-        })
+        }
     }
 
     @JvmStatic
